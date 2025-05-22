@@ -68,7 +68,7 @@ function getOptimalMove(state: number[]): [number, number] | null {
 
 function checkEndGame(whoMovedLast: string): void {
   if (heaps.every(h => h === 0)) {
-    messageEl.textContent = `${whoMovedLast} took the last stick. ${whoMovedLast} loses!`;
+    messageEl.textContent = `${whoMovedLast} took the last stick. ${whoMovedLast} Wins!`;
     isGameOver = true;
   }
 }
