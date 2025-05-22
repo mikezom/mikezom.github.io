@@ -6,28 +6,9 @@
   <title>Nim Game</title>
   <link rel="stylesheet" href="../../style.css" />
   <style>
-    .nim-game {
-      max-width: 600px;
-      margin: 50px auto;
-      padding: 20px;
-      background-color: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    }
-    .sticks {
-      font-size: 20px;
-      margin: 20px 0;
-    }
-    .controls button {
-      font-size: 16px;
-      margin: 5px;
-      padding: 10px 20px;
-      cursor: pointer;
-    }
-    .message {
-      margin-top: 20px;
-      font-weight: bold;
-    }
+    .nim-game { max-width: 600px; margin: auto; background: white; padding: 20px; }
+    .controls input, .controls button { margin: 5px; padding: 5px; }
+    #game-state { font-family: monospace; white-space: pre; margin-top: 20px; }
   </style>
 </head>
 <body>
@@ -44,63 +25,19 @@
   </div>
 
   <div class="main-content nim-game">
-    <h1>Play Nim Against AI</h1>
-    <p class="sticks" id="stick-count">Sticks remaining: 15</p>
-
+    <h1>Nim (Multi-Heap)</h1>
     <div class="controls">
-      <p>Your move: Take 1, 2, or 3 sticks</p>
-      <button onclick="playerMove(1)">Take 1</button>
-      <button onclick="playerMove(2)">Take 2</button>
-      <button onclick="playerMove(3)">Take 3</button>
+      <label for="heap-input">Heap:</label>
+      <input id="heap-input" type="number" min="0" />
+      <label for="count-input">Count:</label>
+      <input id="count-input" type="number" min="1" />
+      <button onclick="playerMove()">Take</button>
     </div>
-
-    <p class="message" id="message"></p>
+    <div id="game-state"></div>
+    <div class="message" id="message"></div>
   </div>
 
-  <script>
-    let sticks = 15;
-    const stickCountEl = document.getElementById('stick-count');
-    const messageEl = document.getElementById('message');
-
-    function updateDisplay() {
-      stickCountEl.textContent = `Sticks remaining: ${sticks}`;
-    }
-
-    function playerMove(n) {
-      if (sticks <= 0 || n < 1 || n > 3) return;
-
-      sticks -= n;
-      updateDisplay();
-
-      if (sticks <= 0) {
-        messageEl.textContent = "You took the last stick. You lose!";
-        return;
-      }
-
-      // Delay AI move slightly for realism
-      setTimeout(aiMove, 700);
-    }
-
-    function aiMove() {
-      let aiTake = optimalMove(sticks);
-      sticks -= aiTake;
-      updateDisplay();
-
-      messageEl.textContent = `AI took ${aiTake} stick${aiTake > 1 ? 's' : ''}.`;
-
-      if (sticks <= 0) {
-        messageEl.textContent += " AI took the last stick. AI loses!";
-      }
-    }
-
-    function optimalMove(remaining) {
-      // Misère Nim strategy: try to leave 1 stick
-      if (remaining <= 4) return Math.max(1, remaining - 1);
-      return (remaining - 1) % 4 || 1;
-    }
-
-    updateDisplay();
-  </script>
+  <script src="nim-multi.js"></script>
 
 </body>
 </html>
