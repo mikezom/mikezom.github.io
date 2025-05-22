@@ -65,16 +65,23 @@
     }
 
     .link-list li {
-      margin: 10px 0;
+      margin: 20px 0;
     }
 
     .link-list a {
       color: #0066cc;
       text-decoration: none;
+      font-weight: bold;
     }
 
     .link-list a:hover {
       text-decoration: underline;
+    }
+
+    .link-comment {
+      font-size: 14px;
+      color: #555;
+      margin-left: 10px;
     }
   </style>
 </head>
@@ -84,7 +91,7 @@
     <div class="site-name">my site</div>
     <div class="nav-buttons">
       <a href="../index.html">Home</a>
-      <a href="links.html">Internet Bookmark</a>
+      <a href="links.html">Links</a>
       <a href="#">Button 3</a>
       <a href="#">Button 4</a>
       <a href="#">Button 5</a>
@@ -95,11 +102,26 @@
     <h1>Interesting Links</h1>
     <div class="link-list">
       <ul>
-        <li><a href="https://example.com/link1" target="_blank">Awesome Game Dev Resource</a></li>
-        <li><a href="https://example.com/link2" target="_blank">Tutorial on WebGL</a></li>
-        <li><a href="https://example.com/link3" target="_blank">Free Game Assets</a></li>
-        <li><a href="https://example.com/link4" target="_blank">My Favorite Game</a></li>
-        <li><a href="https://example.com/link5" target="_blank">Interesting Design Blog</a></li>
+        <li>
+          <a href="https://example.com/link1" target="_blank">Awesome Game Dev Resource</a>
+          <div class="link-comment">A great starting point for game development tutorials</div>
+        </li>
+        <li>
+          <a href="https://example.com/link2" target="_blank">Tutorial on WebGL</a>
+          <div class="link-comment">Teaches you how to use WebGL for browser games</div>
+        </li>
+        <li>
+          <a href="https://example.com/link3" target="_blank">Free Game Assets</a>
+          <div class="link-comment">Site to find free 2D and 3D assets for your projects</div>
+        </li>
+        <li>
+          <a href="https://example.com/link4" target="_blank">My Favorite Game</a>
+          <div class="link-comment">One of my favorite games for inspiration</div>
+        </li>
+        <li>
+          <a href="https://example.com/link5" target="_blank">Interesting Design Blog</a>
+          <div class="link-comment">Articles on game and UI/UX design concepts</div>
+        </li>
       </ul>
     </div>
   </div>
