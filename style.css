@@ -50,6 +50,7 @@ body {
 }
 
 /* Link List for Links Page */
+/*
 .link-list {
     max-width: 600px;
     margin: 0 auto;
@@ -116,3 +117,43 @@ body {
     margin-right: 0.5rem;
     vertical-align: middle;
 }
+*/
+/* Shared list style for both links and to-dos */
+.section-list {
+    max-width: 600px;
+    margin: 2rem auto;
+    background: #ffffff;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
+
+  .section-list h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    text-align: left;
+    padding-left: 0.5rem;
+  }
+
+  .section-list ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .section-list li {
+    padding: 0.5rem;
+    font-size: 1.1rem;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+  }
+
+  .section-list li:last-child {
+    border-bottom: none;
+  }
+
+  .section-list input[type="checkbox"] {
+    margin-right: 0.75rem;
+    transform: scale(1.2);
+  }
