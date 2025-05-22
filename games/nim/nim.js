@@ -1,3 +1,4 @@
+"use strict";
 let heaps = [3, 5, 7];
 let isGameOver = false;
 const stateEl = document.getElementById('game-state');

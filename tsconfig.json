@@ -1,0 +1,9 @@
+{
+    "compilerOptions": {
+      "target": "ES2015",
+      "outFile": "games/nim/nim.js",
+      "rootDir": "ts",
+      "strict": true
+    },
+    "include": ["ts/nim.ts"]
+  }
