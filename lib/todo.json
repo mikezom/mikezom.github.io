@@ -1,0 +1,7 @@
+[
+    { "label": "Set up multiplayer logic", "checked": false },
+    { "label": "Implement AI opponent", "checked": true },
+    { "label": "Add card images", "checked": false },
+    { "label": "Build game lobby", "checked": false },
+    { "label": "Add score tracking", "checked": true }
+]

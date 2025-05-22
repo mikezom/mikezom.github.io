@@ -1,47 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>My Site</title>
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Site</title>
+    <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
 
-  <div class="navbar">
-    <div class="site-name">my site</div>
-    <div class="nav-buttons">
-      <a href="index.html">Home Page</a>
-      <a href="lib/links.html">Internet Bookmark</a>
-      <a href="games/nim/index.html">Games</a>
-      <a href="#">Button 4</a>
-      <a href="#">Button 5</a>
+    <div class="navbar">
+        <div class="site-name">my site</div>
+        <div class="nav-buttons">
+            <a href="index.html">Home Page</a>
+            <a href="lib/links.html">Internet Bookmark</a>
+            <a href="games/nim/index.html">Games</a>
+            <a href="#">Button 4</a>
+            <a href="#">Button 5</a>
+        </div>
     </div>
-  </div>
 
-  <div class="main-content">
-    <h1>Title of my site</h1>
-    <p>
-      Glorp nizzlewump crandible floop. Bazzle sproing twizzle harken snorfledibble.
-      Jibberishum flarn dooblewink chortleblat greebleflarpt snozzmuggin!
-    </p>
-    <p>
-        <br>
-        Various Personal Link:
-    </p>
-    <div class="link-list">
-        <ul>
-          <li>
-            <a href="https://github.com/mikezom" target="_blank">My github pages</a>
-            <div class="link-comment"></div>
-          </li>
-          <li>
-            <a href="https://scholar.rose-hulman.edu/rhumj/vol23/iss1/1/" target="_blank">Additional Fay Identities of the Extended Toda Hierarchy</a>
-            <div class="link-comment">My paper focusing on the extended Toda Lattice hierarchy, written in 2020</div>
-          </li>
-        </ul>
-      </div>
-  </div>
+    <div class="main-content">
+        <h1>Title of my site</h1>
+        <p>
+            Glorp nizzlewump crandible floop. Bazzle sproing twizzle harken snorfledibble.
+            Jibberishum flarn dooblewink chortleblat greebleflarpt snozzmuggin!
+            <br>
+        </p>
+        <div class="todo-section">
+            <h2>📝 To-Do List</h2>
+            <ul class="todo-list" id="todo-list">
+            </ul>
+        </div>
+        <p>
+            <br>
+            Various Personal Link:
+        </p>
+        <div class="link-list">
+            <ul>
+                <li>
+                    <a href="https://github.com/mikezom" target="_blank">My github pages</a>
+                    <div class="link-comment"></div>
+                </li>
+                <li>
+                    <a href="https://scholar.rose-hulman.edu/rhumj/vol23/iss1/1/" target="_blank">Additional Fay
+                        Identities of the Extended Toda Hierarchy</a>
+                    <div class="link-comment">My paper focusing on the extended Toda Lattice hierarchy, written in 2020
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
 
+    <script src="js/main.js"></script>
 </body>
+
 </html>

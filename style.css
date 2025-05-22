@@ -3,80 +3,116 @@ body {
     margin: 0;
     font-family: Arial, sans-serif;
     background-color: #f4f4f4;
-  }
+}
 
-  /* Navigation Bar */
-  .navbar {
+/* Navigation Bar */
+.navbar {
     display: flex;
     justify-content: space-between;
     align-items: center;
     background-color: #333;
     color: white;
     padding: 10px 20px;
-  }
+}
 
-  .navbar .site-name {
+.navbar .site-name {
     font-size: 20px;
     font-weight: bold;
-  }
+}
 
-  .navbar .nav-buttons {
+.navbar .nav-buttons {
     display: flex;
     gap: 10px;
-  }
+}
 
-  .navbar .nav-buttons a {
+.navbar .nav-buttons a {
     color: white;
     text-decoration: none;
     padding: 8px 12px;
     background-color: #444;
     border-radius: 4px;
-  }
+}
 
-  .navbar .nav-buttons a:hover {
+.navbar .nav-buttons a:hover {
     background-color: #555;
-  }
+}
 
-  /* Main Content Section */
-  .main-content {
+/* Main Content Section */
+.main-content {
     text-align: center;
     margin-top: 50px;
     padding: 0 20px;
-  }
+}
 
-  .main-content h1 {
+.main-content h1 {
     font-size: 30px;
     margin-bottom: 20px;
-  }
+}
 
-  /* Link List for Links Page */
-  .link-list {
+/* Link List for Links Page */
+.link-list {
     max-width: 600px;
     margin: 0 auto;
     text-align: left;
-  }
+}
 
-  .link-list ul {
+.link-list ul {
     list-style-type: none;
     padding: 0;
-  }
+}
 
-  .link-list li {
+.link-list li {
     margin: 20px 0;
-  }
+}
 
-  .link-list a {
+.link-list a {
     color: #0066cc;
     text-decoration: none;
     font-weight: bold;
-  }
+}
 
-  .link-list a:hover {
+.link-list a:hover {
     text-decoration: underline;
-  }
+}
 
-  .link-comment {
+.link-comment {
     font-size: 14px;
     color: #555;
     margin-left: 10px;
-  }
+}
+
+.todo-section {
+    max-width: 600px;
+    margin: 2rem auto;
+    background: #ffffff;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.todo-section h2 {
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+    text-align: center;
+}
+
+.todo-list {
+    list-style: none;
+    padding: 0;
+}
+
+.todo-list li {
+    padding: 0.5rem 0;
+    font-size: 1.1rem;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.todo-list li:last-child {
+    border-bottom: none;
+}
+
+.todo-list input[type="checkbox"] {
+    transform: scale(1.2);
+    margin-right: 0.5rem;
+    vertical-align: middle;
+}
