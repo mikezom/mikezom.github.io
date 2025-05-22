@@ -1,1 +1,86 @@
-Hello World
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Site</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+    }
+
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: #333;
+      color: white;
+      padding: 10px 20px;
+    }
+
+    .navbar .site-name {
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .navbar .nav-buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    .navbar .nav-buttons a {
+      color: white;
+      text-decoration: none;
+      padding: 8px 12px;
+      background-color: #444;
+      border-radius: 4px;
+    }
+
+    .navbar .nav-buttons a:hover {
+      background-color: #555;
+    }
+
+    .main-content {
+      text-align: center;
+      margin-top: 50px;
+      padding: 0 20px;
+    }
+
+    .main-content h1 {
+      font-size: 36px;
+      margin-bottom: 20px;
+    }
+
+    .main-content p {
+      max-width: 600px;
+      margin: 0 auto;
+      line-height: 1.6;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="navbar">
+    <div class="site-name">my site</div>
+    <div class="nav-buttons">
+      <a href="#">Button 1</a>
+      <a href="#">Button 2</a>
+      <a href="#">Button 3</a>
+      <a href="#">Button 4</a>
+      <a href="#">Button 5</a>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <h1>Title of my site</h1>
+    <p>
+      Glorp nizzlewump crandible floop. Bazzle sproing twizzle harken snorfledibble.
+      Jibberishum flarn dooblewink chortleblat greebleflarpt snozzmuggin!
+    </p>
+  </div>
+
+</body>
+</html>
