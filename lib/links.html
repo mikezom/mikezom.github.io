@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>My Site</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Links - My Site</title>
   <style>
     body {
       margin: 0;
@@ -49,15 +49,32 @@
     }
 
     .main-content h1 {
-      font-size: 36px;
+      font-size: 30px;
       margin-bottom: 20px;
     }
 
-    .main-content p {
+    .link-list {
       max-width: 600px;
       margin: 0 auto;
-      line-height: 1.6;
-      color: #333;
+      text-align: left;
+    }
+
+    .link-list ul {
+      list-style-type: none;
+      padding: 0;
+    }
+
+    .link-list li {
+      margin: 10px 0;
+    }
+
+    .link-list a {
+      color: #0066cc;
+      text-decoration: none;
+    }
+
+    .link-list a:hover {
+      text-decoration: underline;
     }
   </style>
 </head>
@@ -66,8 +83,8 @@
   <div class="navbar">
     <div class="site-name">my site</div>
     <div class="nav-buttons">
-      <a href="index.html">Home</a>
-      <a href="lib/links.html">Internet Bookmark</a>
+      <a href="../index.html">Home</a>
+      <a href="links.html">Internet Bookmark</a>
       <a href="#">Button 3</a>
       <a href="#">Button 4</a>
       <a href="#">Button 5</a>
@@ -75,20 +92,16 @@
   </div>
 
   <div class="main-content">
-    <h1>Title of my site</h1>
-    <p>
-      Glorp nizzlewump crandible floop. Bazzle sproing twizzle harken snorfledibble.
-      Jibberishum flarn dooblewink chortleblat greebleflarpt snozzmuggin!
-    </p>
-    <p>
-        Various Personal Link:
-    </p>
-    <a href="https://github.com/mikezom">
-        My github pages
-    </a>
-    <a href="https://scholar.rose-hulman.edu/rhumj/vol23/iss1/1/">
-        My paper about fay identities, 2021
-    </a>
+    <h1>Interesting Links</h1>
+    <div class="link-list">
+      <ul>
+        <li><a href="https://example.com/link1" target="_blank">Awesome Game Dev Resource</a></li>
+        <li><a href="https://example.com/link2" target="_blank">Tutorial on WebGL</a></li>
+        <li><a href="https://example.com/link3" target="_blank">Free Game Assets</a></li>
+        <li><a href="https://example.com/link4" target="_blank">My Favorite Game</a></li>
+        <li><a href="https://example.com/link5" target="_blank">Interesting Design Blog</a></li>
+      </ul>
+    </div>
   </div>
 
 </body>
