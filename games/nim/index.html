@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Nim Game</title>
+  <link rel="stylesheet" href="../../style.css" />
+  <style>
+    .nim-game {
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    .sticks {
+      font-size: 20px;
+      margin: 20px 0;
+    }
+    .controls button {
+      font-size: 16px;
+      margin: 5px;
+      padding: 10px 20px;
+      cursor: pointer;
+    }
+    .message {
+      margin-top: 20px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="navbar">
+    <div class="site-name">my site</div>
+    <div class="nav-buttons">
+      <a href="../index.html">Home</a>
+      <a href="../lib/links.html">Links</a>
+      <a href="#">Button 3</a>
+      <a href="#">Button 4</a>
+      <a href="#">Button 5</a>
+    </div>
+  </div>
+
+  <div class="main-content nim-game">
+    <h1>Play Nim Against AI</h1>
+    <p class="sticks" id="stick-count">Sticks remaining: 15</p>
+
+    <div class="controls">
+      <p>Your move: Take 1, 2, or 3 sticks</p>
+      <button onclick="playerMove(1)">Take 1</button>
+      <button onclick="playerMove(2)">Take 2</button>
+      <button onclick="playerMove(3)">Take 3</button>
+    </div>
+
+    <p class="message" id="message"></p>
+  </div>
+
+  <script>
+    let sticks = 15;
+    const stickCountEl = document.getElementById('stick-count');
+    const messageEl = document.getElementById('message');
+
+    function updateDisplay() {
+      stickCountEl.textContent = `Sticks remaining: ${sticks}`;
+    }
+
+    function playerMove(n) {
+      if (sticks <= 0 || n < 1 || n > 3) return;
+
+      sticks -= n;
+      updateDisplay();
+
+      if (sticks <= 0) {
+        messageEl.textContent = "You took the last stick. You lose!";
+        return;
+      }
+
+      // Delay AI move slightly for realism
+      setTimeout(aiMove, 700);
+    }
+
+    function aiMove() {
+      let aiTake = optimalMove(sticks);
+      sticks -= aiTake;
+      updateDisplay();
+
+      messageEl.textContent = `AI took ${aiTake} stick${aiTake > 1 ? 's' : ''}.`;
+
+      if (sticks <= 0) {
+        messageEl.textContent += " AI took the last stick. AI loses!";
+      }
+    }
+
+    function optimalMove(remaining) {
+      // Misère Nim strategy: try to leave 1 stick
+      if (remaining <= 4) return Math.max(1, remaining - 1);
+      return (remaining - 1) % 4 || 1;
+    }
+
+    updateDisplay();
+  </script>
+
+</body>
+</html>

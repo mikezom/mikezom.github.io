@@ -4,94 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Links - My Site</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background-color: #f4f4f4;
-    }
-
-    .navbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background-color: #333;
-      color: white;
-      padding: 10px 20px;
-    }
-
-    .navbar .site-name {
-      font-size: 20px;
-      font-weight: bold;
-    }
-
-    .navbar .nav-buttons {
-      display: flex;
-      gap: 10px;
-    }
-
-    .navbar .nav-buttons a {
-      color: white;
-      text-decoration: none;
-      padding: 8px 12px;
-      background-color: #444;
-      border-radius: 4px;
-    }
-
-    .navbar .nav-buttons a:hover {
-      background-color: #555;
-    }
-
-    .main-content {
-      text-align: center;
-      margin-top: 50px;
-      padding: 0 20px;
-    }
-
-    .main-content h1 {
-      font-size: 30px;
-      margin-bottom: 20px;
-    }
-
-    .link-list {
-      max-width: 600px;
-      margin: 0 auto;
-      text-align: left;
-    }
-
-    .link-list ul {
-      list-style-type: none;
-      padding: 0;
-    }
-
-    .link-list li {
-      margin: 20px 0;
-    }
-
-    .link-list a {
-      color: #0066cc;
-      text-decoration: none;
-      font-weight: bold;
-    }
-
-    .link-list a:hover {
-      text-decoration: underline;
-    }
-
-    .link-comment {
-      font-size: 14px;
-      color: #555;
-      margin-left: 10px;
-    }
-  </style>
+  <link rel="stylesheet" href="../style.css" />
 </head>
 <body>
 
   <div class="navbar">
     <div class="site-name">my site</div>
     <div class="nav-buttons">
-      <a href="../index.html">Home</a>
-      <a href="links.html">Links</a>
+      <a href="../index.html">Home Page</a>
+      <a href="links.html">Internet Bookmark</a>
       <a href="#">Button 3</a>
       <a href="#">Button 4</a>
       <a href="#">Button 5</a>
@@ -99,28 +20,20 @@
   </div>
 
   <div class="main-content">
-    <h1>Interesting Links</h1>
+    <h1>Internet Bookmark</h1>
     <div class="link-list">
       <ul>
         <li>
-          <a href="https://example.com/link1" target="_blank">Awesome Game Dev Resource</a>
-          <div class="link-comment">A great starting point for game development tutorials</div>
+          <a href="https://arxiv.org/abs/2304.03442" target="_blank">Generative Agents: Interactive Simulacra of Human Behavior</a>
+          <div class="link-comment">A very important paper that may inspire future game developers</div>
         </li>
         <li>
-          <a href="https://example.com/link2" target="_blank">Tutorial on WebGL</a>
-          <div class="link-comment">Teaches you how to use WebGL for browser games</div>
+          <a href="https://m8nscape.github.io" target="_blank">Home page of rustbell</a>
+          <div class="link-comment">One of my friends' website</div>
         </li>
         <li>
-          <a href="https://example.com/link3" target="_blank">Free Game Assets</a>
-          <div class="link-comment">Site to find free 2D and 3D assets for your projects</div>
-        </li>
-        <li>
-          <a href="https://example.com/link4" target="_blank">My Favorite Game</a>
-          <div class="link-comment">One of my favorite games for inspiration</div>
-        </li>
-        <li>
-          <a href="https://example.com/link5" target="_blank">Interesting Design Blog</a>
-          <div class="link-comment">Articles on game and UI/UX design concepts</div>
+          <a href="https://www.bilibili.com/opus/984525384696463369?spm_id_from=333.1365.0.0" target="_blank">Mtg Commander Draft</a>
+          <div class="link-comment">A really interesting way to play magic the gathering</div>
         </li>
       </ul>
     </div>
