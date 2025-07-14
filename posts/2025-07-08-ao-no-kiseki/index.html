@@ -1,0 +1,301 @@
+<!doctype html><html lang=en dir=auto><head><meta charset=utf-8><meta http-equiv=X-UA-Compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=robots content="index, follow"><title>2025 07 08 碧轨数值设计推导及反拆(ongoing) | Wandering in Dreams</title><meta name=keywords content><meta name=description content="碧轨数值设计推导及反拆
+问题拆解
+若需要为碧轨设计数值，我们需要从经济数值和战斗数值两方面进行问题拆解。其中，经济数值将会决定玩家打怪掉落、任务奖励数值、宝箱内容等与游戏内货币相关的数值；战斗数值将会决定玩家战斗时的攻击/防御、升级经验值需求、道具回复量等与战斗相关的数值。
+经济数值
+确认反馈逻辑以及游戏内经济系统类型
+游戏内的反馈逻辑为：素材获取 - 养成提升 - 战斗验证。在这类单机游戏中，玩家的资源入口为固定任务奖励发放和可重复刷取的打怪掉落。玩家的资源出口为有上限的战力提升和收藏品收集。所以我们需要实现的目标是入口与出口平衡，并控制玩家在游戏过程中的刷取时间以平衡玩家游戏行为占比。
+正向推导
+我们假设采用基于玩家游玩时间的设计，\(产出价值 = 等级 \times 游玩时间 \times 模块倍率\)。并确定玩家在不同模块内的游玩时间。更重要的模块，例如主线任务，会拥有更高的模块倍率，从而使得玩家完成主线任务的意愿更高。玩家若需要在10级花费10分钟完成主线任务(模块倍率2.0)，那么该主线任务的总奖励应为200单位价值（包括主线遇敌的掉落价值、任务奖励价值）。
+将这些模块的产出价值加总便可得到玩家在一段游玩时间内的总产出价值。玩家会需要将这些价值投入到资源出口处。根据不同出口所占比例，我们可以估计出每个模块对于玩家资源的消耗。接下来，我们根据不同出口的类型进行价值计算：
+
+永久，不可重复刷取（例：武器装备）：若玩家提升武器模块的方式只有购买武器这一项，那么我们可以通过单机RPG武器定价的方式来计算武器的价值。
+永久，可重复刷取（例：圣遗物、词条）：我们可以通过计算玩家时间投入的方式来计算一次随机的价值。见单机RPG词条定价。
+消耗品，不可重复获取（例：成就类收藏品）：我们可以根据预期目标达成时间来计算这些道具的价值。
+消耗品，可重复获取（例：战斗道具）：我们需要道具对于玩家行为的影响来估计这些道具的价值，见单机RPG战斗道具定价
+
+反向推导
+接下来，我们将简要分析碧轨一部分具体模块的数值与其之间的关系，并与前文的正向推导进行对比。
+
+经验值系统
+金币系统
+
+[TODO]经验值系统
+游戏中的经验值由且仅由击败怪物获得。
+[TODO]金币系统
+战斗数值
+[TODO]正向推导
+[TODO]反向推导
+附带计算
+单机RPG武器定价
+假设前提
+在游戏模块（具体章节）内，
+
+玩家在满练度时的战力为原练度时的200%
+共有4个战力提升模块，每个模块对于战力的提升相互独立且为乘算
+玩家需要达到至少原练度的150%才能通过该模块。达到该战力的时间为30min
+玩家预期的战力提升时间为60min，满练度为120min
+玩家在主线中花费的时间为120min，为固定时间
+玩家在原练度时等级为50，满练度时等级为60
+
+武器设定提升计算
+
+每个战力模块在满练度时的提升为2^{1/4}=18.92%，花费时间为30min
+每个战力模块在保底练度时的提升为1.5^{1/4}=10.67%，花费时间为7.5min
+我们希望随着玩家花费时间增加，提升逐渐减少，故函数形如f(t) = p_1 * 2^(p_2 * t) + p_3, 已知f(0) = 1, f(7.5) = 1.1067, f(30) = 1.1892，近似计算后得 f(t) = -0.1982 * 2^(-0.1487 * t) + 1.1982
+
+    % 1. Define the data points
+    t_data = [0; 7.5; 30];
+    f_data = [1; 1.1067; 1.1892];
+
+    % 2. Define the model function f(t) = k*2^(a*t) + b
+    % The parameter vector 'p' holds the coefficients: p(1)=k, p(2)=a, p(3)=b
+    model = @(p, t) p(1) * 2.^(p(2) * t) + p(3);
+
+    % 3. Provide an initial guess for the parameters [k, a, b]
+    % From f(0)=1, we know k+b=1. If we guess k=1, then b=0.
+    % A small positive 'a' is a reasonable start.
+    p0 = [-0.165030382039, -0.2, 1.1892];
+
+    % 4. Call lsqcurvefit to find the best-fit parameters
+    % Syntax: lsqcurvefit(function, initial_guess, x_data, y_data)
+    p_fit = lsqcurvefit(model, p0, t_data, f_data);
+
+    % 5. Display the results
+    k = p_fit(1);
+    a = p_fit(2);
+    b = p_fit(3);
+
+    fprintf('The solved parameters are:\n');
+    fprintf('k = %f\n', k);
+    fprintf('a = %f\n', a);
+    fprintf('b = %f\n', b);
+
+    fprintf('\nThe final equation is: f(t) = %.4f * 2^(%.4f * t) + %.4f\n', k, a, b);
+
+根据以上近似，我们可以得到玩家花费不同时间可得到的预期提升。且我们可以得到玩家的预期战力为f(15)^4 = 175.27%
+我们可以根据玩家在单个战力模块的时间投入回报节点来安排其对应收益。（例如，在5分钟时获取饰品A1，在10分钟时获取饰品A2；若A1与A2相互冲突，A1的提升应为7.98%，A2的提升应为12.75%）
+
+武器价值计算
+
+以武器获取为例。若安排3档武器，1级为自带，2级为合格，3级为最强。那么1级武器的伤害结果为100%，2级为110.67%，3级为118.92%。2级需要7.5分钟获取，3级需要30分钟获取。
+玩家在游戏过程中不断产生价值，其价值与游玩时间、游戏等级成正比。我们可以令每分钟产生对应等级的价值。其中，主线产生的价值翻倍以引导玩家行为。
+玩家会将游戏过程中产生的价值以货币的形式投入于战力模块，从而提升自己的战力。
+玩家在游戏模块中最高的花费时间为240min。其中，120min为主线，产出\(120 \times 50 \times 2=12000\)单位价值，120分钟为养成，产出\(120 \times 50=6000\)单位价值，共18000单位价值。这些价值的出口在于战力模块，也就是说每个战力模块可以被分配4500单位价值。
+我们希望玩家无需重复刷取，可以通过3级武器=2级武器+升级包的形式设计武器购买。根据获取时间比例，2级武器为900单位价值，3级武器升级包为3600单位价值。若我们平滑武器强度曲线，令3级武器为19%提升，但令2级武器为14%提升，则可以通过前文中计算的公式来获取刷取时间：2级12分钟。那么此时2级武器为1800单位价值，3级武器升级包为2700单位价值，玩家的观感更好。
+
+单机RPG圣遗物定价
+假设前提
+在该模块内，"><meta name=author content><link rel=canonical href=https://mikezom.github.io/posts/2025-07-08-ao-no-kiseki/><script id=MathJax-script async src=https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js></script><script>MathJax={tex:{displayMath:[["\\[","\\]"],["$$","$$"]],inlineMath:[["\\(","\\)"]]},loader:{load:["ui/safe"]}}</script><link crossorigin=anonymous href=/assets/css/stylesheet.8fe10233a706bc87f2e08b3cf97b8bd4c0a80f10675a143675d59212121037c0.css integrity="sha256-j+ECM6cGvIfy4Is8+XuL1MCoDxBnWhQ2ddWSEhIQN8A=" rel="preload stylesheet" as=style><link rel=icon href=https://mikezom.github.io/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://mikezom.github.io/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://mikezom.github.io/favicon-32x32.png><link rel=apple-touch-icon href=https://mikezom.github.io/apple-touch-icon.png><link rel=mask-icon href=https://mikezom.github.io/safari-pinned-tab.svg><meta name=theme-color content="#2e2e33"><meta name=msapplication-TileColor content="#2e2e33"><link rel=alternate hreflang=en href=https://mikezom.github.io/posts/2025-07-08-ao-no-kiseki/><noscript><style>#theme-toggle,.top-link{display:none}</style><style>@media(prefers-color-scheme:dark){:root{--theme:rgb(29, 30, 32);--entry:rgb(46, 46, 51);--primary:rgb(218, 218, 219);--secondary:rgb(155, 156, 157);--tertiary:rgb(65, 66, 68);--content:rgb(196, 196, 197);--code-block-bg:rgb(46, 46, 51);--code-bg:rgb(55, 56, 62);--border:rgb(51, 51, 51)}.list{background:var(--theme)}.list:not(.dark)::-webkit-scrollbar-track{background:0 0}.list:not(.dark)::-webkit-scrollbar-thumb{border-color:var(--theme)}}</style></noscript><meta property="og:url" content="https://mikezom.github.io/posts/2025-07-08-ao-no-kiseki/"><meta property="og:site_name" content="Wandering in Dreams"><meta property="og:title" content="2025 07 08 碧轨数值设计推导及反拆(ongoing)"><meta property="og:description" content="碧轨数值设计推导及反拆 问题拆解 若需要为碧轨设计数值，我们需要从经济数值和战斗数值两方面进行问题拆解。其中，经济数值将会决定玩家打怪掉落、任务奖励数值、宝箱内容等与游戏内货币相关的数值；战斗数值将会决定玩家战斗时的攻击/防御、升级经验值需求、道具回复量等与战斗相关的数值。
+经济数值 确认反馈逻辑以及游戏内经济系统类型 游戏内的反馈逻辑为：素材获取 - 养成提升 - 战斗验证。在这类单机游戏中，玩家的资源入口为固定任务奖励发放和可重复刷取的打怪掉落。玩家的资源出口为有上限的战力提升和收藏品收集。所以我们需要实现的目标是入口与出口平衡，并控制玩家在游戏过程中的刷取时间以平衡玩家游戏行为占比。
+正向推导 我们假设采用基于玩家游玩时间的设计，\(产出价值 = 等级 \times 游玩时间 \times 模块倍率\)。并确定玩家在不同模块内的游玩时间。更重要的模块，例如主线任务，会拥有更高的模块倍率，从而使得玩家完成主线任务的意愿更高。玩家若需要在10级花费10分钟完成主线任务(模块倍率2.0)，那么该主线任务的总奖励应为200单位价值（包括主线遇敌的掉落价值、任务奖励价值）。
+将这些模块的产出价值加总便可得到玩家在一段游玩时间内的总产出价值。玩家会需要将这些价值投入到资源出口处。根据不同出口所占比例，我们可以估计出每个模块对于玩家资源的消耗。接下来，我们根据不同出口的类型进行价值计算：
+永久，不可重复刷取（例：武器装备）：若玩家提升武器模块的方式只有购买武器这一项，那么我们可以通过单机RPG武器定价的方式来计算武器的价值。 永久，可重复刷取（例：圣遗物、词条）：我们可以通过计算玩家时间投入的方式来计算一次随机的价值。见单机RPG词条定价。 消耗品，不可重复获取（例：成就类收藏品）：我们可以根据预期目标达成时间来计算这些道具的价值。 消耗品，可重复获取（例：战斗道具）：我们需要道具对于玩家行为的影响来估计这些道具的价值，见单机RPG战斗道具定价 反向推导 接下来，我们将简要分析碧轨一部分具体模块的数值与其之间的关系，并与前文的正向推导进行对比。
+经验值系统 金币系统 [TODO]经验值系统 游戏中的经验值由且仅由击败怪物获得。
+[TODO]金币系统 战斗数值 [TODO]正向推导 [TODO]反向推导 附带计算 单机RPG武器定价 假设前提 在游戏模块（具体章节）内，
+玩家在满练度时的战力为原练度时的200% 共有4个战力提升模块，每个模块对于战力的提升相互独立且为乘算 玩家需要达到至少原练度的150%才能通过该模块。达到该战力的时间为30min 玩家预期的战力提升时间为60min，满练度为120min 玩家在主线中花费的时间为120min，为固定时间 玩家在原练度时等级为50，满练度时等级为60 武器设定提升计算 每个战力模块在满练度时的提升为2^{1/4}=18.92%，花费时间为30min 每个战力模块在保底练度时的提升为1.5^{1/4}=10.67%，花费时间为7.5min 我们希望随着玩家花费时间增加，提升逐渐减少，故函数形如f(t) = p_1 * 2^(p_2 * t) + p_3, 已知f(0) = 1, f(7.5) = 1.1067, f(30) = 1.1892，近似计算后得 f(t) = -0.1982 * 2^(-0.1487 * t) + 1.1982 % 1. Define the data points t_data = [0; 7.5; 30]; f_data = [1; 1.1067; 1.1892]; % 2. Define the model function f(t) = k*2^(a*t) + b % The parameter vector 'p' holds the coefficients: p(1)=k, p(2)=a, p(3)=b model = @(p, t) p(1) * 2.^(p(2) * t) + p(3); % 3. Provide an initial guess for the parameters [k, a, b] % From f(0)=1, we know k+b=1. If we guess k=1, then b=0. % A small positive 'a' is a reasonable start. p0 = [-0.165030382039, -0.2, 1.1892]; % 4. Call lsqcurvefit to find the best-fit parameters % Syntax: lsqcurvefit(function, initial_guess, x_data, y_data) p_fit = lsqcurvefit(model, p0, t_data, f_data); % 5. Display the results k = p_fit(1); a = p_fit(2); b = p_fit(3); fprintf('The solved parameters are:\n'); fprintf('k = %f\n', k); fprintf('a = %f\n', a); fprintf('b = %f\n', b); fprintf('\nThe final equation is: f(t) = %.4f * 2^(%.4f * t) + %.4f\n', k, a, b); 根据以上近似，我们可以得到玩家花费不同时间可得到的预期提升。且我们可以得到玩家的预期战力为f(15)^4 = 175.27% 我们可以根据玩家在单个战力模块的时间投入回报节点来安排其对应收益。（例如，在5分钟时获取饰品A1，在10分钟时获取饰品A2；若A1与A2相互冲突，A1的提升应为7.98%，A2的提升应为12.75%） 武器价值计算 以武器获取为例。若安排3档武器，1级为自带，2级为合格，3级为最强。那么1级武器的伤害结果为100%，2级为110.67%，3级为118.92%。2级需要7.5分钟获取，3级需要30分钟获取。 玩家在游戏过程中不断产生价值，其价值与游玩时间、游戏等级成正比。我们可以令每分钟产生对应等级的价值。其中，主线产生的价值翻倍以引导玩家行为。 玩家会将游戏过程中产生的价值以货币的形式投入于战力模块，从而提升自己的战力。 玩家在游戏模块中最高的花费时间为240min。其中，120min为主线，产出\(120 \times 50 \times 2=12000\)单位价值，120分钟为养成，产出\(120 \times 50=6000\)单位价值，共18000单位价值。这些价值的出口在于战力模块，也就是说每个战力模块可以被分配4500单位价值。 我们希望玩家无需重复刷取，可以通过3级武器=2级武器+升级包的形式设计武器购买。根据获取时间比例，2级武器为900单位价值，3级武器升级包为3600单位价值。若我们平滑武器强度曲线，令3级武器为19%提升，但令2级武器为14%提升，则可以通过前文中计算的公式来获取刷取时间：2级12分钟。那么此时2级武器为1800单位价值，3级武器升级包为2700单位价值，玩家的观感更好。 单机RPG圣遗物定价 假设前提 在该模块内，"><meta property="og:locale" content="en-us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2025-07-08T09:52:58+08:00"><meta property="article:modified_time" content="2025-07-08T09:52:58+08:00"><meta name=twitter:card content="summary"><meta name=twitter:title content="2025 07 08 碧轨数值设计推导及反拆(ongoing)"><meta name=twitter:description content="碧轨数值设计推导及反拆
+问题拆解
+若需要为碧轨设计数值，我们需要从经济数值和战斗数值两方面进行问题拆解。其中，经济数值将会决定玩家打怪掉落、任务奖励数值、宝箱内容等与游戏内货币相关的数值；战斗数值将会决定玩家战斗时的攻击/防御、升级经验值需求、道具回复量等与战斗相关的数值。
+经济数值
+确认反馈逻辑以及游戏内经济系统类型
+游戏内的反馈逻辑为：素材获取 - 养成提升 - 战斗验证。在这类单机游戏中，玩家的资源入口为固定任务奖励发放和可重复刷取的打怪掉落。玩家的资源出口为有上限的战力提升和收藏品收集。所以我们需要实现的目标是入口与出口平衡，并控制玩家在游戏过程中的刷取时间以平衡玩家游戏行为占比。
+正向推导
+我们假设采用基于玩家游玩时间的设计，\(产出价值 = 等级 \times 游玩时间 \times 模块倍率\)。并确定玩家在不同模块内的游玩时间。更重要的模块，例如主线任务，会拥有更高的模块倍率，从而使得玩家完成主线任务的意愿更高。玩家若需要在10级花费10分钟完成主线任务(模块倍率2.0)，那么该主线任务的总奖励应为200单位价值（包括主线遇敌的掉落价值、任务奖励价值）。
+将这些模块的产出价值加总便可得到玩家在一段游玩时间内的总产出价值。玩家会需要将这些价值投入到资源出口处。根据不同出口所占比例，我们可以估计出每个模块对于玩家资源的消耗。接下来，我们根据不同出口的类型进行价值计算：
+
+永久，不可重复刷取（例：武器装备）：若玩家提升武器模块的方式只有购买武器这一项，那么我们可以通过单机RPG武器定价的方式来计算武器的价值。
+永久，可重复刷取（例：圣遗物、词条）：我们可以通过计算玩家时间投入的方式来计算一次随机的价值。见单机RPG词条定价。
+消耗品，不可重复获取（例：成就类收藏品）：我们可以根据预期目标达成时间来计算这些道具的价值。
+消耗品，可重复获取（例：战斗道具）：我们需要道具对于玩家行为的影响来估计这些道具的价值，见单机RPG战斗道具定价
+
+反向推导
+接下来，我们将简要分析碧轨一部分具体模块的数值与其之间的关系，并与前文的正向推导进行对比。
+
+经验值系统
+金币系统
+
+[TODO]经验值系统
+游戏中的经验值由且仅由击败怪物获得。
+[TODO]金币系统
+战斗数值
+[TODO]正向推导
+[TODO]反向推导
+附带计算
+单机RPG武器定价
+假设前提
+在游戏模块（具体章节）内，
+
+玩家在满练度时的战力为原练度时的200%
+共有4个战力提升模块，每个模块对于战力的提升相互独立且为乘算
+玩家需要达到至少原练度的150%才能通过该模块。达到该战力的时间为30min
+玩家预期的战力提升时间为60min，满练度为120min
+玩家在主线中花费的时间为120min，为固定时间
+玩家在原练度时等级为50，满练度时等级为60
+
+武器设定提升计算
+
+每个战力模块在满练度时的提升为2^{1/4}=18.92%，花费时间为30min
+每个战力模块在保底练度时的提升为1.5^{1/4}=10.67%，花费时间为7.5min
+我们希望随着玩家花费时间增加，提升逐渐减少，故函数形如f(t) = p_1 * 2^(p_2 * t) + p_3, 已知f(0) = 1, f(7.5) = 1.1067, f(30) = 1.1892，近似计算后得 f(t) = -0.1982 * 2^(-0.1487 * t) + 1.1982
+
+    % 1. Define the data points
+    t_data = [0; 7.5; 30];
+    f_data = [1; 1.1067; 1.1892];
+
+    % 2. Define the model function f(t) = k*2^(a*t) + b
+    % The parameter vector 'p' holds the coefficients: p(1)=k, p(2)=a, p(3)=b
+    model = @(p, t) p(1) * 2.^(p(2) * t) + p(3);
+
+    % 3. Provide an initial guess for the parameters [k, a, b]
+    % From f(0)=1, we know k+b=1. If we guess k=1, then b=0.
+    % A small positive 'a' is a reasonable start.
+    p0 = [-0.165030382039, -0.2, 1.1892];
+
+    % 4. Call lsqcurvefit to find the best-fit parameters
+    % Syntax: lsqcurvefit(function, initial_guess, x_data, y_data)
+    p_fit = lsqcurvefit(model, p0, t_data, f_data);
+
+    % 5. Display the results
+    k = p_fit(1);
+    a = p_fit(2);
+    b = p_fit(3);
+
+    fprintf('The solved parameters are:\n');
+    fprintf('k = %f\n', k);
+    fprintf('a = %f\n', a);
+    fprintf('b = %f\n', b);
+
+    fprintf('\nThe final equation is: f(t) = %.4f * 2^(%.4f * t) + %.4f\n', k, a, b);
+
+根据以上近似，我们可以得到玩家花费不同时间可得到的预期提升。且我们可以得到玩家的预期战力为f(15)^4 = 175.27%
+我们可以根据玩家在单个战力模块的时间投入回报节点来安排其对应收益。（例如，在5分钟时获取饰品A1，在10分钟时获取饰品A2；若A1与A2相互冲突，A1的提升应为7.98%，A2的提升应为12.75%）
+
+武器价值计算
+
+以武器获取为例。若安排3档武器，1级为自带，2级为合格，3级为最强。那么1级武器的伤害结果为100%，2级为110.67%，3级为118.92%。2级需要7.5分钟获取，3级需要30分钟获取。
+玩家在游戏过程中不断产生价值，其价值与游玩时间、游戏等级成正比。我们可以令每分钟产生对应等级的价值。其中，主线产生的价值翻倍以引导玩家行为。
+玩家会将游戏过程中产生的价值以货币的形式投入于战力模块，从而提升自己的战力。
+玩家在游戏模块中最高的花费时间为240min。其中，120min为主线，产出\(120 \times 50 \times 2=12000\)单位价值，120分钟为养成，产出\(120 \times 50=6000\)单位价值，共18000单位价值。这些价值的出口在于战力模块，也就是说每个战力模块可以被分配4500单位价值。
+我们希望玩家无需重复刷取，可以通过3级武器=2级武器+升级包的形式设计武器购买。根据获取时间比例，2级武器为900单位价值，3级武器升级包为3600单位价值。若我们平滑武器强度曲线，令3级武器为19%提升，但令2级武器为14%提升，则可以通过前文中计算的公式来获取刷取时间：2级12分钟。那么此时2级武器为1800单位价值，3级武器升级包为2700单位价值，玩家的观感更好。
+
+单机RPG圣遗物定价
+假设前提
+在该模块内，"><script type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Posts","item":"https://mikezom.github.io/posts/"},{"@type":"ListItem","position":2,"name":"2025 07 08 碧轨数值设计推导及反拆(ongoing)","item":"https://mikezom.github.io/posts/2025-07-08-ao-no-kiseki/"}]}</script><script type=application/ld+json>{"@context":"https://schema.org","@type":"BlogPosting","headline":"2025 07 08 碧轨数值设计推导及反拆(ongoing)","name":"2025 07 08 碧轨数值设计推导及反拆(ongoing)","description":"碧轨数值设计推导及反拆 问题拆解 若需要为碧轨设计数值，我们需要从经济数值和战斗数值两方面进行问题拆解。其中，经济数值将会决定玩家打怪掉落、任务奖励数值、宝箱内容等与游戏内货币相关的数值；战斗数值将会决定玩家战斗时的攻击/防御、升级经验值需求、道具回复量等与战斗相关的数值。\n经济数值 确认反馈逻辑以及游戏内经济系统类型 游戏内的反馈逻辑为：素材获取 - 养成提升 - 战斗验证。在这类单机游戏中，玩家的资源入口为固定任务奖励发放和可重复刷取的打怪掉落。玩家的资源出口为有上限的战力提升和收藏品收集。所以我们需要实现的目标是入口与出口平衡，并控制玩家在游戏过程中的刷取时间以平衡玩家游戏行为占比。\n正向推导 我们假设采用基于玩家游玩时间的设计，\\(产出价值 = 等级 \\times 游玩时间 \\times 模块倍率\\)。并确定玩家在不同模块内的游玩时间。更重要的模块，例如主线任务，会拥有更高的模块倍率，从而使得玩家完成主线任务的意愿更高。玩家若需要在10级花费10分钟完成主线任务(模块倍率2.0)，那么该主线任务的总奖励应为200单位价值（包括主线遇敌的掉落价值、任务奖励价值）。\n将这些模块的产出价值加总便可得到玩家在一段游玩时间内的总产出价值。玩家会需要将这些价值投入到资源出口处。根据不同出口所占比例，我们可以估计出每个模块对于玩家资源的消耗。接下来，我们根据不同出口的类型进行价值计算：\n永久，不可重复刷取（例：武器装备）：若玩家提升武器模块的方式只有购买武器这一项，那么我们可以通过单机RPG武器定价的方式来计算武器的价值。 永久，可重复刷取（例：圣遗物、词条）：我们可以通过计算玩家时间投入的方式来计算一次随机的价值。见单机RPG词条定价。 消耗品，不可重复获取（例：成就类收藏品）：我们可以根据预期目标达成时间来计算这些道具的价值。 消耗品，可重复获取（例：战斗道具）：我们需要道具对于玩家行为的影响来估计这些道具的价值，见单机RPG战斗道具定价 反向推导 接下来，我们将简要分析碧轨一部分具体模块的数值与其之间的关系，并与前文的正向推导进行对比。\n经验值系统 金币系统 [TODO]经验值系统 游戏中的经验值由且仅由击败怪物获得。\n[TODO]金币系统 战斗数值 [TODO]正向推导 [TODO]反向推导 附带计算 单机RPG武器定价 假设前提 在游戏模块（具体章节）内，\n玩家在满练度时的战力为原练度时的200% 共有4个战力提升模块，每个模块对于战力的提升相互独立且为乘算 玩家需要达到至少原练度的150%才能通过该模块。达到该战力的时间为30min 玩家预期的战力提升时间为60min，满练度为120min 玩家在主线中花费的时间为120min，为固定时间 玩家在原练度时等级为50，满练度时等级为60 武器设定提升计算 每个战力模块在满练度时的提升为2^{1/4}=18.92%，花费时间为30min 每个战力模块在保底练度时的提升为1.5^{1/4}=10.67%，花费时间为7.5min 我们希望随着玩家花费时间增加，提升逐渐减少，故函数形如f(t) = p_1 * 2^(p_2 * t) + p_3, 已知f(0) = 1, f(7.5) = 1.1067, f(30) = 1.1892，近似计算后得 f(t) = -0.1982 * 2^(-0.1487 * t) + 1.1982 % 1. Define the data points t_data = [0; 7.5; 30]; f_data = [1; 1.1067; 1.1892]; % 2. Define the model function f(t) = k*2^(a*t) + b % The parameter vector \u0026#39;p\u0026#39; holds the coefficients: p(1)=k, p(2)=a, p(3)=b model = @(p, t) p(1) * 2.^(p(2) * t) + p(3); % 3. Provide an initial guess for the parameters [k, a, b] % From f(0)=1, we know k+b=1. If we guess k=1, then b=0. % A small positive \u0026#39;a\u0026#39; is a reasonable start. p0 = [-0.165030382039, -0.2, 1.1892]; % 4. Call lsqcurvefit to find the best-fit parameters % Syntax: lsqcurvefit(function, initial_guess, x_data, y_data) p_fit = lsqcurvefit(model, p0, t_data, f_data); % 5. Display the results k = p_fit(1); a = p_fit(2); b = p_fit(3); fprintf(\u0026#39;The solved parameters are:\\n\u0026#39;); fprintf(\u0026#39;k = %f\\n\u0026#39;, k); fprintf(\u0026#39;a = %f\\n\u0026#39;, a); fprintf(\u0026#39;b = %f\\n\u0026#39;, b); fprintf(\u0026#39;\\nThe final equation is: f(t) = %.4f * 2^(%.4f * t) + %.4f\\n\u0026#39;, k, a, b); 根据以上近似，我们可以得到玩家花费不同时间可得到的预期提升。且我们可以得到玩家的预期战力为f(15)^4 = 175.27% 我们可以根据玩家在单个战力模块的时间投入回报节点来安排其对应收益。（例如，在5分钟时获取饰品A1，在10分钟时获取饰品A2；若A1与A2相互冲突，A1的提升应为7.98%，A2的提升应为12.75%） 武器价值计算 以武器获取为例。若安排3档武器，1级为自带，2级为合格，3级为最强。那么1级武器的伤害结果为100%，2级为110.67%，3级为118.92%。2级需要7.5分钟获取，3级需要30分钟获取。 玩家在游戏过程中不断产生价值，其价值与游玩时间、游戏等级成正比。我们可以令每分钟产生对应等级的价值。其中，主线产生的价值翻倍以引导玩家行为。 玩家会将游戏过程中产生的价值以货币的形式投入于战力模块，从而提升自己的战力。 玩家在游戏模块中最高的花费时间为240min。其中，120min为主线，产出\\(120 \\times 50 \\times 2=12000\\)单位价值，120分钟为养成，产出\\(120 \\times 50=6000\\)单位价值，共18000单位价值。这些价值的出口在于战力模块，也就是说每个战力模块可以被分配4500单位价值。 我们希望玩家无需重复刷取，可以通过3级武器=2级武器+升级包的形式设计武器购买。根据获取时间比例，2级武器为900单位价值，3级武器升级包为3600单位价值。若我们平滑武器强度曲线，令3级武器为19%提升，但令2级武器为14%提升，则可以通过前文中计算的公式来获取刷取时间：2级12分钟。那么此时2级武器为1800单位价值，3级武器升级包为2700单位价值，玩家的观感更好。 单机RPG圣遗物定价 假设前提 在该模块内，\n","keywords":[],"articleBody":"碧轨数值设计推导及反拆 问题拆解 若需要为碧轨设计数值，我们需要从经济数值和战斗数值两方面进行问题拆解。其中，经济数值将会决定玩家打怪掉落、任务奖励数值、宝箱内容等与游戏内货币相关的数值；战斗数值将会决定玩家战斗时的攻击/防御、升级经验值需求、道具回复量等与战斗相关的数值。\n经济数值 确认反馈逻辑以及游戏内经济系统类型 游戏内的反馈逻辑为：素材获取 - 养成提升 - 战斗验证。在这类单机游戏中，玩家的资源入口为固定任务奖励发放和可重复刷取的打怪掉落。玩家的资源出口为有上限的战力提升和收藏品收集。所以我们需要实现的目标是入口与出口平衡，并控制玩家在游戏过程中的刷取时间以平衡玩家游戏行为占比。\n正向推导 我们假设采用基于玩家游玩时间的设计，\\(产出价值 = 等级 \\times 游玩时间 \\times 模块倍率\\)。并确定玩家在不同模块内的游玩时间。更重要的模块，例如主线任务，会拥有更高的模块倍率，从而使得玩家完成主线任务的意愿更高。玩家若需要在10级花费10分钟完成主线任务(模块倍率2.0)，那么该主线任务的总奖励应为200单位价值（包括主线遇敌的掉落价值、任务奖励价值）。\n将这些模块的产出价值加总便可得到玩家在一段游玩时间内的总产出价值。玩家会需要将这些价值投入到资源出口处。根据不同出口所占比例，我们可以估计出每个模块对于玩家资源的消耗。接下来，我们根据不同出口的类型进行价值计算：\n永久，不可重复刷取（例：武器装备）：若玩家提升武器模块的方式只有购买武器这一项，那么我们可以通过单机RPG武器定价的方式来计算武器的价值。 永久，可重复刷取（例：圣遗物、词条）：我们可以通过计算玩家时间投入的方式来计算一次随机的价值。见单机RPG词条定价。 消耗品，不可重复获取（例：成就类收藏品）：我们可以根据预期目标达成时间来计算这些道具的价值。 消耗品，可重复获取（例：战斗道具）：我们需要道具对于玩家行为的影响来估计这些道具的价值，见单机RPG战斗道具定价 反向推导 接下来，我们将简要分析碧轨一部分具体模块的数值与其之间的关系，并与前文的正向推导进行对比。\n经验值系统 金币系统 [TODO]经验值系统 游戏中的经验值由且仅由击败怪物获得。\n[TODO]金币系统 战斗数值 [TODO]正向推导 [TODO]反向推导 附带计算 单机RPG武器定价 假设前提 在游戏模块（具体章节）内，\n玩家在满练度时的战力为原练度时的200% 共有4个战力提升模块，每个模块对于战力的提升相互独立且为乘算 玩家需要达到至少原练度的150%才能通过该模块。达到该战力的时间为30min 玩家预期的战力提升时间为60min，满练度为120min 玩家在主线中花费的时间为120min，为固定时间 玩家在原练度时等级为50，满练度时等级为60 武器设定提升计算 每个战力模块在满练度时的提升为2^{1/4}=18.92%，花费时间为30min 每个战力模块在保底练度时的提升为1.5^{1/4}=10.67%，花费时间为7.5min 我们希望随着玩家花费时间增加，提升逐渐减少，故函数形如f(t) = p_1 * 2^(p_2 * t) + p_3, 已知f(0) = 1, f(7.5) = 1.1067, f(30) = 1.1892，近似计算后得 f(t) = -0.1982 * 2^(-0.1487 * t) + 1.1982 % 1. Define the data points t_data = [0; 7.5; 30]; f_data = [1; 1.1067; 1.1892]; % 2. Define the model function f(t) = k*2^(a*t) + b % The parameter vector 'p' holds the coefficients: p(1)=k, p(2)=a, p(3)=b model = @(p, t) p(1) * 2.^(p(2) * t) + p(3); % 3. Provide an initial guess for the parameters [k, a, b] % From f(0)=1, we know k+b=1. If we guess k=1, then b=0. % A small positive 'a' is a reasonable start. p0 = [-0.165030382039, -0.2, 1.1892]; % 4. Call lsqcurvefit to find the best-fit parameters % Syntax: lsqcurvefit(function, initial_guess, x_data, y_data) p_fit = lsqcurvefit(model, p0, t_data, f_data); % 5. Display the results k = p_fit(1); a = p_fit(2); b = p_fit(3); fprintf('The solved parameters are:\\n'); fprintf('k = %f\\n', k); fprintf('a = %f\\n', a); fprintf('b = %f\\n', b); fprintf('\\nThe final equation is: f(t) = %.4f * 2^(%.4f * t) + %.4f\\n', k, a, b); 根据以上近似，我们可以得到玩家花费不同时间可得到的预期提升。且我们可以得到玩家的预期战力为f(15)^4 = 175.27% 我们可以根据玩家在单个战力模块的时间投入回报节点来安排其对应收益。（例如，在5分钟时获取饰品A1，在10分钟时获取饰品A2；若A1与A2相互冲突，A1的提升应为7.98%，A2的提升应为12.75%） 武器价值计算 以武器获取为例。若安排3档武器，1级为自带，2级为合格，3级为最强。那么1级武器的伤害结果为100%，2级为110.67%，3级为118.92%。2级需要7.5分钟获取，3级需要30分钟获取。 玩家在游戏过程中不断产生价值，其价值与游玩时间、游戏等级成正比。我们可以令每分钟产生对应等级的价值。其中，主线产生的价值翻倍以引导玩家行为。 玩家会将游戏过程中产生的价值以货币的形式投入于战力模块，从而提升自己的战力。 玩家在游戏模块中最高的花费时间为240min。其中，120min为主线，产出\\(120 \\times 50 \\times 2=12000\\)单位价值，120分钟为养成，产出\\(120 \\times 50=6000\\)单位价值，共18000单位价值。这些价值的出口在于战力模块，也就是说每个战力模块可以被分配4500单位价值。 我们希望玩家无需重复刷取，可以通过3级武器=2级武器+升级包的形式设计武器购买。根据获取时间比例，2级武器为900单位价值，3级武器升级包为3600单位价值。若我们平滑武器强度曲线，令3级武器为19%提升，但令2级武器为14%提升，则可以通过前文中计算的公式来获取刷取时间：2级12分钟。那么此时2级武器为1800单位价值，3级武器升级包为2700单位价值，玩家的观感更好。 单机RPG圣遗物定价 假设前提 在该模块内，\n玩家的原始状态如下： 攻击力 = 100 防御力 = 100 暴击率 = 50% 暴击伤害 = 200% 速度 = 1 共有以下几种词条： 攻击力 + 7% 防御力 + 5% 暴击率 + 10% 暴击伤害 + 20% 速度增加 + 4% 无效果 * 4 \\(玩家战力 = (预期伤害 + 防御力) * 速度\\) 玩家购买该圣遗物时，随机生成4条词条，每条词条的选取相互独立，多个百分比结果为加算。 玩家预期的花费时间为60min，预期提升为15% 玩家等级为50 最优结果计算 对于每种词条，我们设词条数为n_i，易得 $$ \\begin{aligned} D(\\vec{n}) =\u0026\\ ((100 + 7n_1) \\times ((0.5 - 0.1n_3) + (0.5 + 0.1n_3) * (2 + 0.2n_4)) + (100 + 0.05n_2)) \\times (1 + 0.04n_5) \\\\ \\sum n_i =\u0026\\ 4, 0 \\leq n_i \\leq 4, n_i \\in \\mathbb{Z} \\end{aligned} $$ % --- 1. Define the Objective Function --- % We want to MAXIMIZE D, so we will MINIMIZE -D. objectiveFun = @(n) -(((100 + 7*n(1)) * ((0.5 - 0.1*n(3)) + (0.5 + 0.1*n(3)) * (2 + 0.2*n(4))) + (100 + 0.05*n(2))) * (1 + 0.04*n(5))); % --- 2. Define Constraints --- % Number of variables nvars = 5; % Bounds (0 \u003c= n_i \u003c= 4) lb = zeros(1, nvars); % Lower bound of 0 for all variables ub = 4 * ones(1, nvars); % Upper bound of 4 for all variables % Linear Equality Constraint (sum(n_i) = 4) Aeq = ones(1, nvars); % [1, 1, 1, 1, 1] beq = 4; % Integer Variables (all 5 variables are integers) intcon = 1:nvars; % [1, 2, 3, 4, 5] % --- 3. Run the Genetic Algorithm Solver --- % For reproducibility of the result rng default options = optimoptions('ga', 'Display', 'iter'); [n_optimal, fval] = ga(objectiveFun, nvars, [], [], Aeq, beq, lb, ub, [], intcon, options); % --- 4. Display the Results --- % The maximum value is -fval because we minimized the negative of the function. max_D = -fval; fprintf('Solver finished.\\n'); fprintf('Optimal solution vector n:\\n'); disp(n_optimal); fprintf('Maximum function value D(n): %f\\n', max_D); 求得最优解为2条暴击2条暴击伤害，此时战力为原战力的119.2% 提升曲线计算：抽取次数 vs 期望伤害 因为之前使用python模拟过了，这次用vba模拟试试\nSub GetExpectedDamage() Dim MaximumDamage As Double Dim ExpectedDamage As Double Dim NumberOfExperiments As Long Dim SimRelicRoll As Double Dim n1 As Integer Dim n2 As Integer Dim n3 As Integer Dim n4 As Integer Dim n5 As Integer Dim RngRes As Integer NumberOfExperiments = 100000 For i = 1 To 50 ExpectedDamage = 0 For n = 1 To NumberOfExperiments MaximumDamage = 25000 For j = 1 To i n1 = 0 n2 = 0 n3 = 0 n4 = 0 n5 = 0 For k = 1 To 4 RngRes = Int((9 * Rnd) + 1) If RngRes = 1 Then n1 = n1 + 1 ElseIf RngRes = 2 Then n2 = n2 + 1 ElseIf RngRes = 3 Then n3 = n3 + 1 ElseIf RngRes = 4 Then n4 = n4 + 1 ElseIf RngRes = 5 Then n5 = n5 + 1 End If Next k SimRelicRoll = ((100 + 7 * n1) * ((0.5 - 0.1 * n3) + (0.5 + 0.1 * n3) * (2 + 0.2 * n4)) + (100 + 5 * n2)) * (100 + 4 * n5) MaximumDamage = IIf(SimRelicRoll \u003e MaximumDamage, SimRelicRoll, MaximumDamage) Next j ExpectedDamage = ExpectedDamage + (MaximumDamage / NumberOfExperiments) Next n Worksheets(4).Range(\"C\" \u0026 i + 2).Value = ExpectedDamage Next i End Sub 我们希望满足关键节点的投入资源符合预期。由模拟可得到玩家到达预期提升15%的期望抽取次数：11次。由于玩家预期花费时间为60min，预期花费总价值为60*50 = 3000单位价值。故每次抽取的价值约为273单位价值。\n单机RPG战斗道具定价 这里我们主要讨论对于战斗有影响的道具。我们可以根据道具的作用将其进行分类：\n增加战斗资源（在探索过程中，减少回城回复的时间消耗）：HP回复、MP回复、buff药等 解决特殊战力需求（使玩家能击败原本无法击败的敌人）：解除石化、复活药等 战斗的本质是进行资源的转换，玩家将HP、MP、CP等资源转换成伤害，从而击败敌人。所以我们可以将道具的价值与武器的价值通过对于资源转换效率的影响这一锚点链接起来。由于我们已知武器的价格以及其效果，故可以推得其对于资源转换效率的影响。之后，我们可以通过比较武器与道具对于资源转换效率的影响的异同推导道具的价格。\n价格试推导 根据单机RPG武器定价中的假设及其对于武器的定价计算，我们有：2级武器为1800单位价值，提升14%\n我们接着假设玩家在流程中预期面临5场战斗，对于一场通常的战斗，我们有：\n该战斗持续10单位时间(t) 怪的血量为10000，输出为100/t 玩家的血量为2000，输出为1000/t 那么对于2级武器，玩家的输出会提升至1400/t，战斗持续时间会降低至7.14t，玩家承受的伤害会减少286.\n道具1：花费1单位时间使用，使得接下来3回合的输出提升50%\n若我们在该场战斗中使用该道具，战斗持续时间会降低至9.5t，玩家承受的伤害会减少50（在实际开发过程中，还需要考虑玩家的输出曲线、输出爆发等因素）。根据承伤减少的比例，若该道具不会被消耗，那么该道具的售价应为1800/286*50≈315单位价值；若该道具可被消耗，那么其价值应根据战斗场数减少，为315/5=63单位价值。\n道具2：花费1单位时间使用，恢复500血量\n若我们在该场战斗中使用该道具，战斗持续时间会提升至11t，玩家承受的伤害会减少400。同样，根据承伤减少的比例，该道具的售价应为2516或503，取决于是否会被消耗。\n尽管这一价格看起来偏高，但考虑到我们的战斗模型假设，该价格是合理的。因为它极大地降低了玩家的战损。若我们将怪的输出调整为更高的150，那么该道具的售价便会降低为1800/429*350/5=294单位价值。\n道具3：花费1单位时间使用，解除石化（持续3回合，无法行动）。\n这里我们同样可以使用战损逻辑来计算该道具的价值。对于敌人会使用1次石化的战斗，若我们在战斗中使用该道具，战斗持续时间会从13t降低至11t，玩家承受的伤害会由1300降低至1100。对于武器的提升依旧为286。我们可以得到该道具的售价为1258/252，取决于是否会被消耗。\n道具4：花费1单位时间使用，复活角色，为其恢复1000血量。\n复活药在战斗中起到了恢复和提升上限的作用。若我们忽视其提升上限的作用，我们可以通过其为角色恢复血量的功能估计其价值。而对于其提升上限的功能，我们可以通过估计最小投入来估计该道具的实际价值。假设其他条件相同，玩家的血量为900。我们可以使用复活药顺利通过；可以使用更强的武器顺利通过；也可以使用回复药顺利通过。这时，这些方式对于玩家的价值是相同的，都解决了实际的问题。那么复活药的价值应该不低于其他方式的最少价值。额外的，从玩家游戏体验的角度考虑，复活药的价格应稍高于其他方式的价值。通过提升上限角度与恢复血量角度计算出的价值两者中的高者即为复活药的最终价值。\n缺陷与不足：该模型忽略了道具直接的互相影响，且假设了玩家的输出为线性。在实际的游戏设计中，我们需要考虑玩家具体的战斗行为，并根据实际数据来调整定价。\n游玩体验/简评 在一周目最高难度的游玩中，我获得了多样化的战斗体验，这也是我写这篇文章的契机。除了第三章与终章的长度偏长，节奏控制有所失误之外，我可以给碧轨的整体体验一个9分的评价。满足了我对于中高难回合制战斗的需求。\n我简要总结一下每一章的战斗侧重与花费时间：\n序章（2h）：高压的战斗环境，需要持续给主C上buff并给自己吃药保证存活。 第一章（11h）：S技、物理输出/buff为主导的战斗环境，强调通过S技的倍率打出有效输出 第二章（12h）：基本同第一章，但出现一些AOE法术辅助进行输出 间章：海滩（4h）：强调单体作战能力，生存/输出复合检测。间章和第二章中有一些战斗场景仅仅允许2名或更少角色上场。 第三章（8+6h）：要求利用高阶单体法术进行高效输出，强调上速度等debuff。（没有利用加速模式，且未进行刷取，在战鬼战中无法达成dps check，额外耗费了时间） 第四章（8h）：利用高阶群体法术清野怪，闪避放风筝打boss，缇欧S技无敌抗AOE。 断章：越狱（2h）：强调单体作战能力，灵活利用主角战技吃条上buff。 终章（18h）：同第四章，但boss和怪的抗性导致必须使用buff而不是debuff来进行辅助，增加了玩家的蓝量压力。同时需要活用核心回路升到5级解锁的高强度专注魔法。 虽然部分战技与角色有一定平衡性问题（其中一部分应该是出于内容考虑刻意为之），但我在游戏中体会到了构筑与战斗中抉择的乐趣。听说之后的作品难度有明显下调，表示一定程度的遗憾。如果还有类似乐趣的作品，一定会尝试！\n","wordCount":"796","inLanguage":"en","datePublished":"2025-07-08T09:52:58+08:00","dateModified":"2025-07-08T09:52:58+08:00","mainEntityOfPage":{"@type":"WebPage","@id":"https://mikezom.github.io/posts/2025-07-08-ao-no-kiseki/"},"publisher":{"@type":"Organization","name":"Wandering in Dreams","logo":{"@type":"ImageObject","url":"https://mikezom.github.io/favicon.ico"}}}</script></head><body id=top><script>localStorage.getItem("pref-theme")==="dark"?document.body.classList.add("dark"):localStorage.getItem("pref-theme")==="light"?document.body.classList.remove("dark"):window.matchMedia("(prefers-color-scheme: dark)").matches&&document.body.classList.add("dark")</script><header class=header><nav class=nav><div class=logo><a href=https://mikezom.github.io/ accesskey=h title="Wandering in Dreams (Alt + H)">Wandering in Dreams</a><div class=logo-switches><button id=theme-toggle accesskey=t title="(Alt + T)" aria-label="Toggle theme">
+<svg id="moon" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+<svg id="sun" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button></div></div><ul id=menu></ul></nav></header><main class=main><article class=post-single><header class=post-header><h1 class="post-title entry-hint-parent">2025 07 08 碧轨数值设计推导及反拆(ongoing)</h1><div class=post-meta><span title='2025-07-08 09:52:58 +0800 +0800'>July 8, 2025</span>&nbsp;·&nbsp;4 min</div></header><div class=toc><details><summary accesskey=c title="(Alt + C)"><span class=details>Table of Contents</span></summary><div class=inner><ul><li><a href=#%e7%a2%a7%e8%bd%a8%e6%95%b0%e5%80%bc%e8%ae%be%e8%ae%a1%e6%8e%a8%e5%af%bc%e5%8f%8a%e5%8f%8d%e6%8b%86 aria-label=碧轨数值设计推导及反拆>碧轨数值设计推导及反拆</a><ul><li><a href=#%e9%97%ae%e9%a2%98%e6%8b%86%e8%a7%a3 aria-label=问题拆解>问题拆解</a></li><li><a href=#%e7%bb%8f%e6%b5%8e%e6%95%b0%e5%80%bc aria-label=经济数值>经济数值</a><ul><li><a href=#%e7%a1%ae%e8%ae%a4%e5%8f%8d%e9%a6%88%e9%80%bb%e8%be%91%e4%bb%a5%e5%8f%8a%e6%b8%b8%e6%88%8f%e5%86%85%e7%bb%8f%e6%b5%8e%e7%b3%bb%e7%bb%9f%e7%b1%bb%e5%9e%8b aria-label=确认反馈逻辑以及游戏内经济系统类型>确认反馈逻辑以及游戏内经济系统类型</a></li><li><a href=#%e6%ad%a3%e5%90%91%e6%8e%a8%e5%af%bc aria-label=正向推导>正向推导</a></li><li><a href=#%e5%8f%8d%e5%90%91%e6%8e%a8%e5%af%bc aria-label=反向推导>反向推导</a><ul><li><a href=#todo%e7%bb%8f%e9%aa%8c%e5%80%bc%e7%b3%bb%e7%bb%9f aria-label=[TODO]经验值系统>[TODO]经验值系统</a></li><li><a href=#todo%e9%87%91%e5%b8%81%e7%b3%bb%e7%bb%9f aria-label=[TODO]金币系统>[TODO]金币系统</a></li></ul></li></ul></li><li><a href=#%e6%88%98%e6%96%97%e6%95%b0%e5%80%bc aria-label=战斗数值>战斗数值</a><ul><li><a href=#todo%e6%ad%a3%e5%90%91%e6%8e%a8%e5%af%bc aria-label=[TODO]正向推导>[TODO]正向推导</a></li><li><a href=#todo%e5%8f%8d%e5%90%91%e6%8e%a8%e5%af%bc aria-label=[TODO]反向推导>[TODO]反向推导</a></li></ul></li><li><a href=#%e9%99%84%e5%b8%a6%e8%ae%a1%e7%ae%97 aria-label=附带计算>附带计算</a><ul><li><a href=#%e5%8d%95%e6%9c%barpg%e6%ad%a6%e5%99%a8%e5%ae%9a%e4%bb%b7 aria-label=单机RPG武器定价>单机RPG武器定价</a><ul><li><a href=#%e5%81%87%e8%ae%be%e5%89%8d%e6%8f%90 aria-label=假设前提>假设前提</a></li><li><a href=#%e6%ad%a6%e5%99%a8%e8%ae%be%e5%ae%9a%e6%8f%90%e5%8d%87%e8%ae%a1%e7%ae%97 aria-label=武器设定提升计算>武器设定提升计算</a></li><li><a href=#%e6%ad%a6%e5%99%a8%e4%bb%b7%e5%80%bc%e8%ae%a1%e7%ae%97 aria-label=武器价值计算>武器价值计算</a></li></ul></li><li><a href=#%e5%8d%95%e6%9c%barpg%e5%9c%a3%e9%81%97%e7%89%a9%e5%ae%9a%e4%bb%b7 aria-label=单机RPG圣遗物定价>单机RPG圣遗物定价</a><ul><li><a href=#%e5%81%87%e8%ae%be%e5%89%8d%e6%8f%90-1 aria-label=假设前提>假设前提</a></li><li><a href=#%e6%9c%80%e4%bc%98%e7%bb%93%e6%9e%9c%e8%ae%a1%e7%ae%97 aria-label=最优结果计算>最优结果计算</a></li><li><a href=#%e6%8f%90%e5%8d%87%e6%9b%b2%e7%ba%bf%e8%ae%a1%e7%ae%97%e6%8a%bd%e5%8f%96%e6%ac%a1%e6%95%b0-vs-%e6%9c%9f%e6%9c%9b%e4%bc%a4%e5%ae%b3 aria-label="提升曲线计算：抽取次数 vs 期望伤害">提升曲线计算：抽取次数 vs 期望伤害</a></li></ul></li><li><a href=#%e5%8d%95%e6%9c%barpg%e6%88%98%e6%96%97%e9%81%93%e5%85%b7%e5%ae%9a%e4%bb%b7 aria-label=单机RPG战斗道具定价>单机RPG战斗道具定价</a><ul><li><a href=#%e4%bb%b7%e6%a0%bc%e8%af%95%e6%8e%a8%e5%af%bc aria-label=价格试推导>价格试推导</a></li></ul></li></ul></li><li><a href=#%e6%b8%b8%e7%8e%a9%e4%bd%93%e9%aa%8c%e7%ae%80%e8%af%84 aria-label=游玩体验/简评>游玩体验/简评</a></li></ul></li></ul></div></details></div><div class=post-content><h1 id=碧轨数值设计推导及反拆>碧轨数值设计推导及反拆<a hidden class=anchor aria-hidden=true href=#碧轨数值设计推导及反拆>#</a></h1><h2 id=问题拆解>问题拆解<a hidden class=anchor aria-hidden=true href=#问题拆解>#</a></h2><p>若需要为碧轨设计数值，我们需要从<strong>经济数值</strong>和<strong>战斗数值</strong>两方面进行问题拆解。其中，经济数值将会决定玩家打怪掉落、任务奖励数值、宝箱内容等与游戏内货币相关的数值；战斗数值将会决定玩家战斗时的攻击/防御、升级经验值需求、道具回复量等与战斗相关的数值。</p><h2 id=经济数值>经济数值<a hidden class=anchor aria-hidden=true href=#经济数值>#</a></h2><h3 id=确认反馈逻辑以及游戏内经济系统类型>确认反馈逻辑以及游戏内经济系统类型<a hidden class=anchor aria-hidden=true href=#确认反馈逻辑以及游戏内经济系统类型>#</a></h3><p>游戏内的反馈逻辑为：素材获取 - 养成提升 - 战斗验证。在这类单机游戏中，玩家的资源入口为固定任务奖励发放和可重复刷取的打怪掉落。玩家的资源出口为有上限的战力提升和收藏品收集。所以我们需要实现的目标是<strong>入口与出口平衡</strong>，并控制玩家在游戏过程中的刷取时间以平衡玩家游戏行为占比。</p><h3 id=正向推导>正向推导<a hidden class=anchor aria-hidden=true href=#正向推导>#</a></h3><p>我们假设采用基于玩家游玩时间的设计，\(产出价值 = 等级 \times 游玩时间 \times 模块倍率\)。并确定玩家在不同模块内的游玩时间。更重要的模块，例如主线任务，会拥有更高的模块倍率，从而使得玩家完成主线任务的意愿更高。玩家若需要在10级花费10分钟完成主线任务(模块倍率2.0)，那么该主线任务的总奖励应为200单位价值（包括主线遇敌的掉落价值、任务奖励价值）。</p><p>将这些模块的产出价值加总便可得到玩家在一段游玩时间内的总产出价值。玩家会需要将这些价值投入到资源出口处。根据不同出口所占比例，我们可以估计出每个模块对于玩家资源的消耗。接下来，我们根据不同出口的类型进行价值计算：</p><ol><li>永久，不可重复刷取（例：武器装备）：若玩家提升武器模块的方式只有购买武器这一项，那么我们可以通过<a href=#%E5%8D%95%E6%9C%BArpg%E6%AD%A6%E5%99%A8%E5%AE%9A%E4%BB%B7>单机RPG武器定价</a>的方式来计算武器的价值。</li><li>永久，可重复刷取（例：圣遗物、词条）：我们可以通过计算玩家时间投入的方式来计算一次随机的价值。见<a href=#%E5%8D%95%E6%9C%BArpg%E5%9C%A3%E9%81%97%E7%89%A9%E5%AE%9A%E4%BB%B7>单机RPG词条定价</a>。</li><li>消耗品，不可重复获取（例：成就类收藏品）：我们可以根据预期目标达成时间来计算这些道具的价值。</li><li>消耗品，可重复获取（例：战斗道具）：我们需要道具对于玩家行为的影响来估计这些道具的价值，见<a href=#%E5%8D%95%E6%9C%BArpg%E6%88%98%E6%96%97%E9%81%93%E5%85%B7%E5%AE%9A%E4%BB%B7>单机RPG战斗道具定价</a></li></ol><h3 id=反向推导>反向推导<a hidden class=anchor aria-hidden=true href=#反向推导>#</a></h3><p>接下来，我们将简要分析碧轨一部分具体模块的数值与其之间的关系，并与前文的正向推导进行对比。</p><ul><li>经验值系统</li><li>金币系统</li></ul><h4 id=todo经验值系统>[TODO]经验值系统<a hidden class=anchor aria-hidden=true href=#todo经验值系统>#</a></h4><p>游戏中的经验值由且仅由击败怪物获得。</p><h4 id=todo金币系统>[TODO]金币系统<a hidden class=anchor aria-hidden=true href=#todo金币系统>#</a></h4><h2 id=战斗数值>战斗数值<a hidden class=anchor aria-hidden=true href=#战斗数值>#</a></h2><h3 id=todo正向推导>[TODO]正向推导<a hidden class=anchor aria-hidden=true href=#todo正向推导>#</a></h3><h3 id=todo反向推导>[TODO]反向推导<a hidden class=anchor aria-hidden=true href=#todo反向推导>#</a></h3><h2 id=附带计算>附带计算<a hidden class=anchor aria-hidden=true href=#附带计算>#</a></h2><h3 id=单机rpg武器定价>单机RPG武器定价<a hidden class=anchor aria-hidden=true href=#单机rpg武器定价>#</a></h3><h4 id=假设前提>假设前提<a hidden class=anchor aria-hidden=true href=#假设前提>#</a></h4><p>在游戏模块（具体章节）内，</p><ul><li>玩家在满练度时的战力为原练度时的200%</li><li>共有4个战力提升模块，每个模块对于战力的提升相互独立且为乘算</li><li>玩家需要达到至少原练度的150%才能通过该模块。达到该战力的时间为30min</li><li>玩家预期的战力提升时间为60min，满练度为120min</li><li>玩家在主线中花费的时间为120min，为固定时间</li><li>玩家在原练度时等级为50，满练度时等级为60</li></ul><h4 id=武器设定提升计算>武器设定提升计算<a hidden class=anchor aria-hidden=true href=#武器设定提升计算>#</a></h4><ul><li>每个战力模块在满练度时的提升为2^{1/4}=18.92%，花费时间为30min</li><li>每个战力模块在保底练度时的提升为1.5^{1/4}=10.67%，花费时间为7.5min</li><li>我们希望随着玩家花费时间增加，提升逐渐减少，故函数形如f(t) = p_1 * 2^(p_2 * t) + p_3, 已知f(0) = 1, f(7.5) = 1.1067, f(30) = 1.1892，近似计算后得 f(t) = -0.1982 * 2^(-0.1487 * t) + 1.1982</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-matlab data-lang=matlab><span style=display:flex><span>    <span style=color:#75715e>% 1. Define the data points</span>
+</span></span><span style=display:flex><span>    t_data = [<span style=color:#ae81ff>0</span>; <span style=color:#ae81ff>7.5</span>; <span style=color:#ae81ff>30</span>];
+</span></span><span style=display:flex><span>    f_data = [<span style=color:#ae81ff>1</span>; <span style=color:#ae81ff>1.1067</span>; <span style=color:#ae81ff>1.1892</span>];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>% 2. Define the model function f(t) = k*2^(a*t) + b</span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>% The parameter vector &#39;p&#39; holds the coefficients: p(1)=k, p(2)=a, p(3)=b</span>
+</span></span><span style=display:flex><span>    model = @(p, t) p(<span style=color:#ae81ff>1</span>) <span style=color:#f92672>*</span> <span style=color:#ae81ff>2.</span>^(p(<span style=color:#ae81ff>2</span>) <span style=color:#f92672>*</span> t) <span style=color:#f92672>+</span> p(<span style=color:#ae81ff>3</span>);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>% 3. Provide an initial guess for the parameters [k, a, b]</span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>% From f(0)=1, we know k+b=1. If we guess k=1, then b=0.</span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>% A small positive &#39;a&#39; is a reasonable start.</span>
+</span></span><span style=display:flex><span>    p0 = [<span style=color:#f92672>-</span><span style=color:#ae81ff>0.165030382039</span>, <span style=color:#f92672>-</span><span style=color:#ae81ff>0.2</span>, <span style=color:#ae81ff>1.1892</span>];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>% 4. Call lsqcurvefit to find the best-fit parameters</span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>% Syntax: lsqcurvefit(function, initial_guess, x_data, y_data)</span>
+</span></span><span style=display:flex><span>    p_fit = lsqcurvefit(model, p0, t_data, f_data);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>% 5. Display the results</span>
+</span></span><span style=display:flex><span>    k = p_fit(<span style=color:#ae81ff>1</span>);
+</span></span><span style=display:flex><span>    a = p_fit(<span style=color:#ae81ff>2</span>);
+</span></span><span style=display:flex><span>    b = p_fit(<span style=color:#ae81ff>3</span>);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    fprintf(<span style=color:#e6db74>&#39;The solved parameters are:\n&#39;</span>);
+</span></span><span style=display:flex><span>    fprintf(<span style=color:#e6db74>&#39;k = %f\n&#39;</span>, k);
+</span></span><span style=display:flex><span>    fprintf(<span style=color:#e6db74>&#39;a = %f\n&#39;</span>, a);
+</span></span><span style=display:flex><span>    fprintf(<span style=color:#e6db74>&#39;b = %f\n&#39;</span>, b);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    fprintf(<span style=color:#e6db74>&#39;\nThe final equation is: f(t) = %.4f * 2^(%.4f * t) + %.4f\n&#39;</span>, k, a, b);
+</span></span></code></pre></div><ul><li>根据以上近似，我们可以得到玩家花费不同时间可得到的预期提升。且我们可以得到玩家的预期战力为f(15)^4 = 175.27%</li><li>我们可以根据玩家在单个战力模块的时间投入回报节点来安排其对应收益。（例如，在5分钟时获取饰品A1，在10分钟时获取饰品A2；若A1与A2相互冲突，A1的提升应为7.98%，A2的提升应为12.75%）</li></ul><h4 id=武器价值计算>武器价值计算<a hidden class=anchor aria-hidden=true href=#武器价值计算>#</a></h4><ul><li>以武器获取为例。若安排3档武器，1级为自带，2级为合格，3级为最强。那么1级武器的伤害结果为100%，2级为110.67%，3级为118.92%。2级需要7.5分钟获取，3级需要30分钟获取。</li><li>玩家在游戏过程中不断产生价值，其价值与游玩时间、游戏等级成正比。我们可以令每分钟产生对应等级的价值。其中，主线产生的价值翻倍以引导玩家行为。</li><li>玩家会将游戏过程中产生的价值以货币的形式投入于战力模块，从而提升自己的战力。</li><li>玩家在游戏模块中最高的花费时间为240min。其中，120min为主线，产出\(120 \times 50 \times 2=12000\)单位价值，120分钟为养成，产出\(120 \times 50=6000\)单位价值，共18000单位价值。这些价值的出口在于战力模块，也就是说每个战力模块可以被分配4500单位价值。</li><li>我们希望玩家无需重复刷取，可以通过3级武器=2级武器+升级包的形式设计武器购买。根据获取时间比例，2级武器为900单位价值，3级武器升级包为3600单位价值。若我们平滑武器强度曲线，令3级武器为19%提升，但令2级武器为14%提升，则可以通过前文中计算的公式来获取刷取时间：2级12分钟。那么此时2级武器为1800单位价值，3级武器升级包为2700单位价值，玩家的观感更好。</li></ul><h3 id=单机rpg圣遗物定价>单机RPG圣遗物定价<a hidden class=anchor aria-hidden=true href=#单机rpg圣遗物定价>#</a></h3><h4 id=假设前提-1>假设前提<a hidden class=anchor aria-hidden=true href=#假设前提-1>#</a></h4><p>在该模块内，</p><ul><li>玩家的原始状态如下：<ul><li>攻击力 = 100</li><li>防御力 = 100</li><li>暴击率 = 50%</li><li>暴击伤害 = 200%</li><li>速度 = 1</li></ul></li><li>共有以下几种词条：<ul><li>攻击力 + 7%</li><li>防御力 + 5%</li><li>暴击率 + 10%</li><li>暴击伤害 + 20%</li><li>速度增加 + 4%</li><li>无效果 * 4</li></ul></li><li>\(玩家战力 = (预期伤害 + 防御力) * 速度\)</li><li>玩家购买该圣遗物时，随机生成4条词条，每条词条的选取相互独立，多个百分比结果为加算。</li><li>玩家预期的花费时间为60min，预期提升为15%</li><li>玩家等级为50</li></ul><h4 id=最优结果计算>最优结果计算<a hidden class=anchor aria-hidden=true href=#最优结果计算>#</a></h4><ul><li>对于每种词条，我们设词条数为n_i，易得
+$$
+\begin{aligned}
+D(\vec{n}) =&\ ((100 + 7n_1) \times ((0.5 - 0.1n_3) + (0.5 + 0.1n_3) * (2 + 0.2n_4)) + (100 + 0.05n_2)) \times (1 + 0.04n_5) \\
+\sum n_i =&\ 4, 0 \leq n_i \leq 4, n_i \in \mathbb{Z}
+\end{aligned}
+$$</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-matlab data-lang=matlab><span style=display:flex><span><span style=color:#75715e>% --- 1. Define the Objective Function ---</span>
+</span></span><span style=display:flex><span><span style=color:#75715e>% We want to MAXIMIZE D, so we will MINIMIZE -D.</span>
+</span></span><span style=display:flex><span>objectiveFun = @(n) <span style=color:#f92672>-</span>(((<span style=color:#ae81ff>100</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>7</span><span style=color:#f92672>*</span>n(<span style=color:#ae81ff>1</span>)) <span style=color:#f92672>*</span> ((<span style=color:#ae81ff>0.5</span> <span style=color:#f92672>-</span> <span style=color:#ae81ff>0.1</span><span style=color:#f92672>*</span>n(<span style=color:#ae81ff>3</span>)) <span style=color:#f92672>+</span> (<span style=color:#ae81ff>0.5</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>0.1</span><span style=color:#f92672>*</span>n(<span style=color:#ae81ff>3</span>)) <span style=color:#f92672>*</span> (<span style=color:#ae81ff>2</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>0.2</span><span style=color:#f92672>*</span>n(<span style=color:#ae81ff>4</span>))) <span style=color:#f92672>+</span> (<span style=color:#ae81ff>100</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>0.05</span><span style=color:#f92672>*</span>n(<span style=color:#ae81ff>2</span>))) <span style=color:#f92672>*</span> (<span style=color:#ae81ff>1</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>0.04</span><span style=color:#f92672>*</span>n(<span style=color:#ae81ff>5</span>)));
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>% --- 2. Define Constraints ---</span>
+</span></span><span style=display:flex><span><span style=color:#75715e>% Number of variables</span>
+</span></span><span style=display:flex><span>nvars = <span style=color:#ae81ff>5</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>% Bounds (0 &lt;= n_i &lt;= 4)</span>
+</span></span><span style=display:flex><span>lb = zeros(<span style=color:#ae81ff>1</span>, nvars); <span style=color:#75715e>% Lower bound of 0 for all variables</span>
+</span></span><span style=display:flex><span>ub = <span style=color:#ae81ff>4</span> <span style=color:#f92672>*</span> ones(<span style=color:#ae81ff>1</span>, nvars); <span style=color:#75715e>% Upper bound of 4 for all variables</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>% Linear Equality Constraint (sum(n_i) = 4)</span>
+</span></span><span style=display:flex><span>Aeq = ones(<span style=color:#ae81ff>1</span>, nvars); <span style=color:#75715e>% [1, 1, 1, 1, 1]</span>
+</span></span><span style=display:flex><span>beq = <span style=color:#ae81ff>4</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>% Integer Variables (all 5 variables are integers)</span>
+</span></span><span style=display:flex><span>intcon = <span style=color:#ae81ff>1</span>:nvars; <span style=color:#75715e>% [1, 2, 3, 4, 5]</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>% --- 3. Run the Genetic Algorithm Solver ---</span>
+</span></span><span style=display:flex><span><span style=color:#75715e>% For reproducibility of the result</span>
+</span></span><span style=display:flex><span>rng default 
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>options = optimoptions(<span style=color:#e6db74>&#39;ga&#39;</span>, <span style=color:#e6db74>&#39;Display&#39;</span>, <span style=color:#e6db74>&#39;iter&#39;</span>);
+</span></span><span style=display:flex><span>[n_optimal, fval] = ga(objectiveFun, nvars, [], [], Aeq, beq, lb, ub, [], intcon, options);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>% --- 4. Display the Results ---</span>
+</span></span><span style=display:flex><span><span style=color:#75715e>% The maximum value is -fval because we minimized the negative of the function.</span>
+</span></span><span style=display:flex><span>max_D = <span style=color:#f92672>-</span>fval;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>fprintf(<span style=color:#e6db74>&#39;Solver finished.\n&#39;</span>);
+</span></span><span style=display:flex><span>fprintf(<span style=color:#e6db74>&#39;Optimal solution vector n:\n&#39;</span>);
+</span></span><span style=display:flex><span>disp(n_optimal);
+</span></span><span style=display:flex><span>fprintf(<span style=color:#e6db74>&#39;Maximum function value D(n): %f\n&#39;</span>, max_D);
+</span></span></code></pre></div><ul><li>求得最优解为2条暴击2条暴击伤害，此时战力为原战力的119.2%</li></ul><h4 id=提升曲线计算抽取次数-vs-期望伤害>提升曲线计算：抽取次数 vs 期望伤害<a hidden class=anchor aria-hidden=true href=#提升曲线计算抽取次数-vs-期望伤害>#</a></h4><p><del>因为之前使用python模拟过了，这次用vba模拟试试</del></p><pre tabindex=0><code class=language-vba data-lang=vba>Sub GetExpectedDamage()
+    Dim MaximumDamage As Double
+    Dim ExpectedDamage As Double
+    Dim NumberOfExperiments As Long
+    Dim SimRelicRoll As Double
+    Dim n1 As Integer
+    Dim n2 As Integer
+    Dim n3 As Integer
+    Dim n4 As Integer
+    Dim n5 As Integer
+    Dim RngRes As Integer
+    NumberOfExperiments = 100000
+    For i = 1 To 50
+        ExpectedDamage = 0
+        For n = 1 To NumberOfExperiments
+            MaximumDamage = 25000
+            For j = 1 To i
+                n1 = 0
+                n2 = 0
+                n3 = 0
+                n4 = 0
+                n5 = 0
+                For k = 1 To 4
+                    RngRes = Int((9 * Rnd) + 1)
+                    If RngRes = 1 Then
+                        n1 = n1 + 1
+                    ElseIf RngRes = 2 Then
+                        n2 = n2 + 1
+                    ElseIf RngRes = 3 Then
+                        n3 = n3 + 1
+                    ElseIf RngRes = 4 Then
+                        n4 = n4 + 1
+                    ElseIf RngRes = 5 Then
+                        n5 = n5 + 1
+                    End If
+                Next k
+                SimRelicRoll = ((100 + 7 * n1) * ((0.5 - 0.1 * n3) + (0.5 + 0.1 * n3) * (2 + 0.2 * n4)) + (100 + 5 * n2)) * (100 + 4 * n5)
+                MaximumDamage = IIf(SimRelicRoll &gt; MaximumDamage, SimRelicRoll, MaximumDamage)
+            Next j
+            ExpectedDamage = ExpectedDamage + (MaximumDamage / NumberOfExperiments)
+        Next n
+        Worksheets(4).Range(&#34;C&#34; &amp; i + 2).Value = ExpectedDamage
+    Next i
+End Sub
+</code></pre><p><img alt=Expected_Damage loading=lazy src=/posts/2025-07-08-ao-no-kiseki/images/Expected_Damage.png></p><p>我们希望满足关键节点的投入资源符合预期。由模拟可得到玩家到达预期提升15%的期望抽取次数：11次。由于玩家预期花费时间为60min，预期花费总价值为60*50 = 3000单位价值。故每次抽取的价值约为273单位价值。</p><h3 id=单机rpg战斗道具定价>单机RPG战斗道具定价<a hidden class=anchor aria-hidden=true href=#单机rpg战斗道具定价>#</a></h3><p>这里我们主要讨论对于战斗有影响的道具。我们可以根据道具的作用将其进行分类：</p><ol><li>增加战斗资源（在探索过程中，减少回城回复的时间消耗）：HP回复、MP回复、buff药等</li><li>解决特殊战力需求（使玩家能击败原本无法击败的敌人）：解除石化、复活药等</li></ol><p>战斗的本质是进行资源的转换，玩家将HP、MP、CP等资源转换成伤害，从而击败敌人。所以我们可以将道具的价值与武器的价值通过对于资源转换效率的影响这一锚点链接起来。由于我们已知武器的价格以及其效果，故可以推得其对于资源转换效率的影响。之后，我们可以通过比较武器与道具对于资源转换效率的影响的异同推导道具的价格。</p><h4 id=价格试推导>价格试推导<a hidden class=anchor aria-hidden=true href=#价格试推导>#</a></h4><p>根据<a href=#weapon-pricing>单机RPG武器定价</a>中的假设及其对于武器的定价计算，我们有：2级武器为1800单位价值，提升14%</p><p>我们接着假设玩家在流程中预期面临5场战斗，对于一场通常的战斗，我们有：</p><ol><li>该战斗持续10单位时间(t)</li><li>怪的血量为10000，输出为100/t</li><li>玩家的血量为2000，输出为1000/t</li></ol><p>那么对于2级武器，玩家的输出会提升至1400/t，战斗持续时间会降低至7.14t，玩家承受的伤害会减少286.</p><p><strong>道具1</strong>：花费1单位时间使用，使得接下来3回合的输出提升50%</p><p>若我们在该场战斗中使用该道具，战斗持续时间会降低至9.5t，玩家承受的伤害会减少50（在实际开发过程中，还需要考虑玩家的输出曲线、输出爆发等因素）。根据承伤减少的比例，若该道具不会被消耗，那么该道具的售价应为1800/286*50≈315单位价值；若该道具可被消耗，那么其价值应根据战斗场数减少，为315/5=63单位价值。</p><p><strong>道具2</strong>：花费1单位时间使用，恢复500血量</p><p>若我们在该场战斗中使用该道具，战斗持续时间会提升至11t，玩家承受的伤害会减少400。同样，根据承伤减少的比例，该道具的售价应为2516或503，取决于是否会被消耗。</p><p>尽管这一价格看起来偏高，但考虑到我们的战斗模型假设，该价格是合理的。因为它极大地降低了玩家的战损。若我们将怪的输出调整为更高的150，那么该道具的售价便会降低为1800/429*350/5=294单位价值。</p><p><strong>道具3</strong>：花费1单位时间使用，解除石化（持续3回合，无法行动）。</p><p>这里我们同样可以使用战损逻辑来计算该道具的价值。对于敌人会使用1次石化的战斗，若我们在战斗中使用该道具，战斗持续时间会从13t降低至11t，玩家承受的伤害会由1300降低至1100。对于武器的提升依旧为286。我们可以得到该道具的售价为1258/252，取决于是否会被消耗。</p><p><strong>道具4</strong>：花费1单位时间使用，复活角色，为其恢复1000血量。</p><p>复活药在战斗中起到了恢复和提升上限的作用。若我们忽视其提升上限的作用，我们可以通过其为角色恢复血量的功能估计其价值。而对于其提升上限的功能，我们可以通过估计最小投入来估计该道具的实际价值。假设其他条件相同，玩家的血量为900。我们可以使用复活药顺利通过；可以使用更强的武器顺利通过；也可以使用回复药顺利通过。这时，这些方式对于玩家的价值是相同的，都解决了实际的问题。那么复活药的价值应该不低于其他方式的最少价值。额外的，从玩家游戏体验的角度考虑，复活药的价格应稍高于其他方式的价值。通过提升上限角度与恢复血量角度计算出的价值两者中的高者即为复活药的最终价值。</p><p><strong>缺陷与不足</strong>：该模型忽略了道具直接的互相影响，且假设了玩家的输出为线性。在实际的游戏设计中，我们需要考虑玩家具体的战斗行为，并根据实际数据来调整定价。</p><h2 id=游玩体验简评>游玩体验/简评<a hidden class=anchor aria-hidden=true href=#游玩体验简评>#</a></h2><p>在一周目最高难度的游玩中，我获得了多样化的战斗体验，这也是我写这篇文章的契机。除了第三章与终章的长度偏长，节奏控制有所失误之外，我可以给碧轨的整体体验一个9分的评价。满足了我对于中高难回合制战斗的需求。</p><p>我简要总结一下每一章的战斗侧重与花费时间：</p><ul><li>序章（2h）：高压的战斗环境，需要持续给主C上buff并给自己吃药保证存活。</li><li>第一章（11h）：S技、物理输出/buff为主导的战斗环境，强调通过S技的倍率打出有效输出</li><li>第二章（12h）：基本同第一章，但出现一些AOE法术辅助进行输出</li><li>间章：海滩（4h）：强调单体作战能力，生存/输出复合检测。间章和第二章中有一些战斗场景仅仅允许2名或更少角色上场。</li><li>第三章（8+6h）：要求利用高阶单体法术进行高效输出，强调上速度等debuff。（没有利用加速模式，且未进行刷取，在战鬼战中无法达成dps check，额外耗费了时间）</li><li>第四章（8h）：利用高阶群体法术清野怪，闪避放风筝打boss，缇欧S技无敌抗AOE。</li><li>断章：越狱（2h）：强调单体作战能力，灵活利用主角战技吃条上buff。</li><li>终章（18h）：同第四章，但boss和怪的抗性导致必须使用buff而不是debuff来进行辅助，增加了玩家的蓝量压力。同时需要活用核心回路升到5级解锁的高强度专注魔法。</li></ul><p>虽然部分战技与角色有一定平衡性问题（其中一部分应该是出于内容考虑刻意为之），但我在游戏中体会到了构筑与战斗中抉择的乐趣。听说之后的作品难度有明显下调，表示一定程度的遗憾。如果还有类似乐趣的作品，一定会尝试！</p></div><footer class=post-footer><ul class=post-tags></ul></footer></article></main><footer class=footer><span>&copy; 2025 <a href=https://mikezom.github.io/>Wandering in Dreams</a></span> ·
+<span>Powered by
+<a href=https://gohugo.io/ rel="noopener noreferrer" target=_blank>Hugo</a> &
+<a href=https://github.com/adityatelange/hugo-PaperMod/ rel=noopener target=_blank>PaperMod</a></span></footer><a href=#top aria-label="go to top" title="Go to Top (Alt + G)" class=top-link id=top-link accesskey=g><svg viewBox="0 0 12 6" fill="currentColor"><path d="M12 6H0l6-6z"/></svg>
+</a><script>let menu=document.getElementById("menu");menu&&(menu.scrollLeft=localStorage.getItem("menu-scroll-position"),menu.onscroll=function(){localStorage.setItem("menu-scroll-position",menu.scrollLeft)}),document.querySelectorAll('a[href^="#"]').forEach(e=>{e.addEventListener("click",function(e){e.preventDefault();var t=this.getAttribute("href").substr(1);window.matchMedia("(prefers-reduced-motion: reduce)").matches?document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView():document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView({behavior:"smooth"}),t==="top"?history.replaceState(null,null," "):history.pushState(null,null,`#${t}`)})})</script><script>var mybutton=document.getElementById("top-link");window.onscroll=function(){document.body.scrollTop>800||document.documentElement.scrollTop>800?(mybutton.style.visibility="visible",mybutton.style.opacity="1"):(mybutton.style.visibility="hidden",mybutton.style.opacity="0")}</script><script>document.getElementById("theme-toggle").addEventListener("click",()=>{document.body.className.includes("dark")?(document.body.classList.remove("dark"),localStorage.setItem("pref-theme","light")):(document.body.classList.add("dark"),localStorage.setItem("pref-theme","dark"))})</script><script>document.querySelectorAll("pre > code").forEach(e=>{const n=e.parentNode.parentNode,t=document.createElement("button");t.classList.add("copy-code"),t.innerHTML="copy";function s(){t.innerHTML="copied!",setTimeout(()=>{t.innerHTML="copy"},2e3)}t.addEventListener("click",t=>{if("clipboard"in navigator){navigator.clipboard.writeText(e.textContent),s();return}const n=document.createRange();n.selectNodeContents(e);const o=window.getSelection();o.removeAllRanges(),o.addRange(n);try{document.execCommand("copy"),s()}catch{}o.removeRange(n)}),n.classList.contains("highlight")?n.appendChild(t):n.parentNode.firstChild==n||(e.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName=="TABLE"?e.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(t):e.parentNode.appendChild(t))})</script></body></html>

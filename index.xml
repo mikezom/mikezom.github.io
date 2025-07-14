@@ -1,21 +1,697 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
-  <channel>
-    <title>Wandering in Dreams</title>
-    <link>https://mikezom.github.io/</link>
-    <description>Recent content on Wandering in Dreams</description>
-    <generator>Hugo -- 0.147.8</generator>
-    <language>en-us</language>
-    <lastBuildDate>Wed, 18 Jun 2025 09:52:33 +0800</lastBuildDate>
-    <atom:link href="https://mikezom.github.io/index.xml" rel="self" type="application/rss+xml" />
-    <item>
-      <title>Initial_post</title>
-      <link>https://mikezom.github.io/posts/initial_post/</link>
-      <pubDate>Wed, 18 Jun 2025 09:52:33 +0800</pubDate>
-      <guid>https://mikezom.github.io/posts/initial_post/</guid>
-      <description>&lt;p&gt;Finally get things working!&lt;/p&gt;
-&lt;p&gt;Now I need to test image uploading before writing more.&lt;/p&gt;
-&lt;p&gt;Testing Repositories. Again. Again. Again.&lt;/p&gt;</description>
-    </item>
-  </channel>
-</rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Wandering in Dreams</title><link>https://mikezom.github.io/</link><description>Recent content on Wandering in Dreams</description><generator>Hugo -- 0.148.1</generator><language>en-us</language><lastBuildDate>Tue, 08 Jul 2025 09:52:58 +0800</lastBuildDate><atom:link href="https://mikezom.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>2025 07 08 碧轨数值设计推导及反拆(ongoing)</title><link>https://mikezom.github.io/posts/2025-07-08-ao-no-kiseki/</link><pubDate>Tue, 08 Jul 2025 09:52:58 +0800</pubDate><guid>https://mikezom.github.io/posts/2025-07-08-ao-no-kiseki/</guid><description>&lt;h1 id="碧轨数值设计推导及反拆">碧轨数值设计推导及反拆&lt;/h1>
+&lt;h2 id="问题拆解">问题拆解&lt;/h2>
+&lt;p>若需要为碧轨设计数值，我们需要从&lt;strong>经济数值&lt;/strong>和&lt;strong>战斗数值&lt;/strong>两方面进行问题拆解。其中，经济数值将会决定玩家打怪掉落、任务奖励数值、宝箱内容等与游戏内货币相关的数值；战斗数值将会决定玩家战斗时的攻击/防御、升级经验值需求、道具回复量等与战斗相关的数值。&lt;/p>
+&lt;h2 id="经济数值">经济数值&lt;/h2>
+&lt;h3 id="确认反馈逻辑以及游戏内经济系统类型">确认反馈逻辑以及游戏内经济系统类型&lt;/h3>
+&lt;p>游戏内的反馈逻辑为：素材获取 - 养成提升 - 战斗验证。在这类单机游戏中，玩家的资源入口为固定任务奖励发放和可重复刷取的打怪掉落。玩家的资源出口为有上限的战力提升和收藏品收集。所以我们需要实现的目标是&lt;strong>入口与出口平衡&lt;/strong>，并控制玩家在游戏过程中的刷取时间以平衡玩家游戏行为占比。&lt;/p>
+&lt;h3 id="正向推导">正向推导&lt;/h3>
+&lt;p>我们假设采用基于玩家游玩时间的设计，\(产出价值 = 等级 \times 游玩时间 \times 模块倍率\)。并确定玩家在不同模块内的游玩时间。更重要的模块，例如主线任务，会拥有更高的模块倍率，从而使得玩家完成主线任务的意愿更高。玩家若需要在10级花费10分钟完成主线任务(模块倍率2.0)，那么该主线任务的总奖励应为200单位价值（包括主线遇敌的掉落价值、任务奖励价值）。&lt;/p>
+&lt;p>将这些模块的产出价值加总便可得到玩家在一段游玩时间内的总产出价值。玩家会需要将这些价值投入到资源出口处。根据不同出口所占比例，我们可以估计出每个模块对于玩家资源的消耗。接下来，我们根据不同出口的类型进行价值计算：&lt;/p>
+&lt;ol>
+&lt;li>永久，不可重复刷取（例：武器装备）：若玩家提升武器模块的方式只有购买武器这一项，那么我们可以通过&lt;a href="#%E5%8D%95%E6%9C%BArpg%E6%AD%A6%E5%99%A8%E5%AE%9A%E4%BB%B7">单机RPG武器定价&lt;/a>的方式来计算武器的价值。&lt;/li>
+&lt;li>永久，可重复刷取（例：圣遗物、词条）：我们可以通过计算玩家时间投入的方式来计算一次随机的价值。见&lt;a href="#%E5%8D%95%E6%9C%BArpg%E5%9C%A3%E9%81%97%E7%89%A9%E5%AE%9A%E4%BB%B7">单机RPG词条定价&lt;/a>。&lt;/li>
+&lt;li>消耗品，不可重复获取（例：成就类收藏品）：我们可以根据预期目标达成时间来计算这些道具的价值。&lt;/li>
+&lt;li>消耗品，可重复获取（例：战斗道具）：我们需要道具对于玩家行为的影响来估计这些道具的价值，见&lt;a href="#%E5%8D%95%E6%9C%BArpg%E6%88%98%E6%96%97%E9%81%93%E5%85%B7%E5%AE%9A%E4%BB%B7">单机RPG战斗道具定价&lt;/a>&lt;/li>
+&lt;/ol>
+&lt;h3 id="反向推导">反向推导&lt;/h3>
+&lt;p>接下来，我们将简要分析碧轨一部分具体模块的数值与其之间的关系，并与前文的正向推导进行对比。&lt;/p>
+&lt;ul>
+&lt;li>经验值系统&lt;/li>
+&lt;li>金币系统&lt;/li>
+&lt;/ul>
+&lt;h4 id="todo经验值系统">[TODO]经验值系统&lt;/h4>
+&lt;p>游戏中的经验值由且仅由击败怪物获得。&lt;/p>
+&lt;h4 id="todo金币系统">[TODO]金币系统&lt;/h4>
+&lt;h2 id="战斗数值">战斗数值&lt;/h2>
+&lt;h3 id="todo正向推导">[TODO]正向推导&lt;/h3>
+&lt;h3 id="todo反向推导">[TODO]反向推导&lt;/h3>
+&lt;h2 id="附带计算">附带计算&lt;/h2>
+&lt;h3 id="单机rpg武器定价">单机RPG武器定价&lt;/h3>
+&lt;h4 id="假设前提">假设前提&lt;/h4>
+&lt;p>在游戏模块（具体章节）内，&lt;/p>
+&lt;ul>
+&lt;li>玩家在满练度时的战力为原练度时的200%&lt;/li>
+&lt;li>共有4个战力提升模块，每个模块对于战力的提升相互独立且为乘算&lt;/li>
+&lt;li>玩家需要达到至少原练度的150%才能通过该模块。达到该战力的时间为30min&lt;/li>
+&lt;li>玩家预期的战力提升时间为60min，满练度为120min&lt;/li>
+&lt;li>玩家在主线中花费的时间为120min，为固定时间&lt;/li>
+&lt;li>玩家在原练度时等级为50，满练度时等级为60&lt;/li>
+&lt;/ul>
+&lt;h4 id="武器设定提升计算">武器设定提升计算&lt;/h4>
+&lt;ul>
+&lt;li>每个战力模块在满练度时的提升为2^{1/4}=18.92%，花费时间为30min&lt;/li>
+&lt;li>每个战力模块在保底练度时的提升为1.5^{1/4}=10.67%，花费时间为7.5min&lt;/li>
+&lt;li>我们希望随着玩家花费时间增加，提升逐渐减少，故函数形如f(t) = p_1 * 2^(p_2 * t) + p_3, 已知f(0) = 1, f(7.5) = 1.1067, f(30) = 1.1892，近似计算后得 f(t) = -0.1982 * 2^(-0.1487 * t) + 1.1982&lt;/li>
+&lt;/ul>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-matlab" data-lang="matlab">&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e">% 1. Define the data points&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> t_data = [&lt;span style="color:#ae81ff">0&lt;/span>; &lt;span style="color:#ae81ff">7.5&lt;/span>; &lt;span style="color:#ae81ff">30&lt;/span>];
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> f_data = [&lt;span style="color:#ae81ff">1&lt;/span>; &lt;span style="color:#ae81ff">1.1067&lt;/span>; &lt;span style="color:#ae81ff">1.1892&lt;/span>];
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e">% 2. Define the model function f(t) = k*2^(a*t) + b&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e">% The parameter vector &amp;#39;p&amp;#39; holds the coefficients: p(1)=k, p(2)=a, p(3)=b&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> model = @(p, t) p(&lt;span style="color:#ae81ff">1&lt;/span>) &lt;span style="color:#f92672">*&lt;/span> &lt;span style="color:#ae81ff">2.&lt;/span>^(p(&lt;span style="color:#ae81ff">2&lt;/span>) &lt;span style="color:#f92672">*&lt;/span> t) &lt;span style="color:#f92672">+&lt;/span> p(&lt;span style="color:#ae81ff">3&lt;/span>);
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e">% 3. Provide an initial guess for the parameters [k, a, b]&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e">% From f(0)=1, we know k+b=1. If we guess k=1, then b=0.&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e">% A small positive &amp;#39;a&amp;#39; is a reasonable start.&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> p0 = [&lt;span style="color:#f92672">-&lt;/span>&lt;span style="color:#ae81ff">0.165030382039&lt;/span>, &lt;span style="color:#f92672">-&lt;/span>&lt;span style="color:#ae81ff">0.2&lt;/span>, &lt;span style="color:#ae81ff">1.1892&lt;/span>];
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e">% 4. Call lsqcurvefit to find the best-fit parameters&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e">% Syntax: lsqcurvefit(function, initial_guess, x_data, y_data)&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> p_fit = lsqcurvefit(model, p0, t_data, f_data);
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e">% 5. Display the results&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> k = p_fit(&lt;span style="color:#ae81ff">1&lt;/span>);
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> a = p_fit(&lt;span style="color:#ae81ff">2&lt;/span>);
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> b = p_fit(&lt;span style="color:#ae81ff">3&lt;/span>);
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> fprintf(&lt;span style="color:#e6db74">&amp;#39;The solved parameters are:\n&amp;#39;&lt;/span>);
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> fprintf(&lt;span style="color:#e6db74">&amp;#39;k = %f\n&amp;#39;&lt;/span>, k);
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> fprintf(&lt;span style="color:#e6db74">&amp;#39;a = %f\n&amp;#39;&lt;/span>, a);
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> fprintf(&lt;span style="color:#e6db74">&amp;#39;b = %f\n&amp;#39;&lt;/span>, b);
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> fprintf(&lt;span style="color:#e6db74">&amp;#39;\nThe final equation is: f(t) = %.4f * 2^(%.4f * t) + %.4f\n&amp;#39;&lt;/span>, k, a, b);
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;ul>
+&lt;li>根据以上近似，我们可以得到玩家花费不同时间可得到的预期提升。且我们可以得到玩家的预期战力为f(15)^4 = 175.27%&lt;/li>
+&lt;li>我们可以根据玩家在单个战力模块的时间投入回报节点来安排其对应收益。（例如，在5分钟时获取饰品A1，在10分钟时获取饰品A2；若A1与A2相互冲突，A1的提升应为7.98%，A2的提升应为12.75%）&lt;/li>
+&lt;/ul>
+&lt;h4 id="武器价值计算">武器价值计算&lt;/h4>
+&lt;ul>
+&lt;li>以武器获取为例。若安排3档武器，1级为自带，2级为合格，3级为最强。那么1级武器的伤害结果为100%，2级为110.67%，3级为118.92%。2级需要7.5分钟获取，3级需要30分钟获取。&lt;/li>
+&lt;li>玩家在游戏过程中不断产生价值，其价值与游玩时间、游戏等级成正比。我们可以令每分钟产生对应等级的价值。其中，主线产生的价值翻倍以引导玩家行为。&lt;/li>
+&lt;li>玩家会将游戏过程中产生的价值以货币的形式投入于战力模块，从而提升自己的战力。&lt;/li>
+&lt;li>玩家在游戏模块中最高的花费时间为240min。其中，120min为主线，产出\(120 \times 50 \times 2=12000\)单位价值，120分钟为养成，产出\(120 \times 50=6000\)单位价值，共18000单位价值。这些价值的出口在于战力模块，也就是说每个战力模块可以被分配4500单位价值。&lt;/li>
+&lt;li>我们希望玩家无需重复刷取，可以通过3级武器=2级武器+升级包的形式设计武器购买。根据获取时间比例，2级武器为900单位价值，3级武器升级包为3600单位价值。若我们平滑武器强度曲线，令3级武器为19%提升，但令2级武器为14%提升，则可以通过前文中计算的公式来获取刷取时间：2级12分钟。那么此时2级武器为1800单位价值，3级武器升级包为2700单位价值，玩家的观感更好。&lt;/li>
+&lt;/ul>
+&lt;h3 id="单机rpg圣遗物定价">单机RPG圣遗物定价&lt;/h3>
+&lt;h4 id="假设前提-1">假设前提&lt;/h4>
+&lt;p>在该模块内，&lt;/p></description></item><item><title>2025 07 02 鸟群行为模拟</title><link>https://mikezom.github.io/posts/2025-07-01-emergence-group-behavior/</link><pubDate>Tue, 01 Jul 2025 00:23:34 +0800</pubDate><guid>https://mikezom.github.io/posts/2025-07-01-emergence-group-behavior/</guid><description>&lt;h1 id="涌现式群体行为模拟">涌现式群体行为模拟&lt;/h1>
+&lt;p>link: &lt;a href="https://www.bilibili.com/video/BV1XgM1zQEF5/">【游戏开发秘籍】用算法让NPC集体“开窍”？Boids鸟群算法详解！&lt;/a>&lt;/p>
+&lt;p>鱼群、人群、蜂群等的自然模拟，使用Boids算法。&lt;/p>
+&lt;h2 id="算法逻辑">算法逻辑&lt;/h2>
+$$
+\vec{V} = \Pi c_i \vec{v_i}
+$$&lt;p>其中，\(\vec{V}\)为最终向量，\(c_i\)为可调权重，\(\vec{v_i}\)为单规则向量。&lt;/p>
+&lt;p>我们有以下3条规则：&lt;/p>
+&lt;h3 id="规则一cohesion-向群体中心靠拢">规则一：Cohesion, 向群体中心靠拢&lt;/h3>
+&lt;p>目标：保持群体集聚。&lt;/p>
+&lt;p>行为：计算特定范围（通常为&lt;strong>视野范围&lt;/strong>）内&lt;strong>同伴&lt;/strong>的&lt;strong>平均位置&lt;/strong>，然后产生一个朝向这个平均位置的驱动力。&lt;/p>
+&lt;h3 id="规则二separation-避免与同伴碰撞">规则二：Separation, 避免与同伴碰撞&lt;/h3>
+&lt;p>目标：避免碰撞。&lt;/p>
+&lt;p>行为：对于每一个过近的同伴，产生一个排斥力，将这些排斥力加总。&lt;/p>
+&lt;h3 id="规则三alignment-与同伴移动方向保持一致">规则三：Alignment, 与同伴移动方向保持一致。&lt;/h3>
+&lt;p>目标：与群体行动方向趋同。&lt;/p>
+&lt;p>行为：计算特定范围（通常为&lt;strong>视野范围&lt;/strong>）内&lt;strong>同伴&lt;/strong>的&lt;strong>平均方向&lt;/strong>，然后调整方向来匹配平均方向。&lt;/p>
+&lt;h2 id="算法实现">算法实现&lt;/h2>
+&lt;p>&lt;img alt="Figure" loading="lazy" src="https://mikezom.github.io/posts/2025-07-01-emergence-group-behavior/images/birds.png">&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-python" data-lang="python">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">import&lt;/span> numpy &lt;span style="color:#66d9ef">as&lt;/span> np
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">import&lt;/span> random
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">import&lt;/span> matplotlib.pyplot &lt;span style="color:#66d9ef">as&lt;/span> plt
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">import&lt;/span> math
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">import&lt;/span> statistics
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">import&lt;/span> pygame
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>MAX_SPEED &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">10.0&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>WEIGHT_COHESION &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">1&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>WEIGHT_SEPARATION &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">1&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>WEIGHT_ALIGNMENT &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">1&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>WEIGHT_FORCE_AGAINST_WALL &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>SOCIAL_DISTANCE &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">20.0&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>FRAMERATE &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">30&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>GRAY &lt;span style="color:#f92672">=&lt;/span> (&lt;span style="color:#ae81ff">127&lt;/span>, &lt;span style="color:#ae81ff">127&lt;/span>, &lt;span style="color:#ae81ff">127&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>WHITE &lt;span style="color:#f92672">=&lt;/span> (&lt;span style="color:#ae81ff">255&lt;/span>, &lt;span style="color:#ae81ff">255&lt;/span>, &lt;span style="color:#ae81ff">255&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">cart2pol&lt;/span>(x, y):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> rho &lt;span style="color:#f92672">=&lt;/span> np&lt;span style="color:#f92672">.&lt;/span>sqrt(x&lt;span style="color:#f92672">**&lt;/span>&lt;span style="color:#ae81ff">2&lt;/span> &lt;span style="color:#f92672">+&lt;/span> y&lt;span style="color:#f92672">**&lt;/span>&lt;span style="color:#ae81ff">2&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> phi &lt;span style="color:#f92672">=&lt;/span> math&lt;span style="color:#f92672">.&lt;/span>degrees(np&lt;span style="color:#f92672">.&lt;/span>arctan2(y, x))
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">return&lt;/span>((phi &lt;span style="color:#f92672">+&lt;/span> &lt;span style="color:#ae81ff">360&lt;/span>) &lt;span style="color:#f92672">%&lt;/span> &lt;span style="color:#ae81ff">360&lt;/span>, rho)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">pol2cart&lt;/span>(phi, rho):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> x &lt;span style="color:#f92672">=&lt;/span> rho &lt;span style="color:#f92672">*&lt;/span> np&lt;span style="color:#f92672">.&lt;/span>cos(math&lt;span style="color:#f92672">.&lt;/span>radians(phi))
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> y &lt;span style="color:#f92672">=&lt;/span> rho &lt;span style="color:#f92672">*&lt;/span> np&lt;span style="color:#f92672">.&lt;/span>sin(math&lt;span style="color:#f92672">.&lt;/span>radians(phi))
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">return&lt;/span>(x, y)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">class&lt;/span> &lt;span style="color:#a6e22e">EmergenceBehaviorDemo&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">class&lt;/span> &lt;span style="color:#a6e22e">Unit&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> x &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0.0&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> y &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0.0&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> phi: float
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> v &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0.0&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> i: int
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">__init__&lt;/span>(self, i):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> self&lt;span style="color:#f92672">.&lt;/span>i &lt;span style="color:#f92672">=&lt;/span> i
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">class&lt;/span> &lt;span style="color:#a6e22e">Playground&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> w &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">1280.0&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> h &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">720.0&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">__init__&lt;/span>(self):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">pass&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> unit_index: int
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> peasants: list[Unit]
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> playground: Playground
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> leader_id: int
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> leader_walk_weight_of_previous_tick: float &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0.6&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> plot_x: list[float]
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> plot_y: list[float]
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">init_peasants&lt;/span>(self, group_grid_width: int, playground: Playground, interval: float) &lt;span style="color:#f92672">-&amp;gt;&lt;/span> list[Unit]:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e"># Generate at the center of the playground&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">class&lt;/span> &lt;span style="color:#a6e22e">Center&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> x &lt;span style="color:#f92672">=&lt;/span> playground&lt;span style="color:#f92672">.&lt;/span>w&lt;span style="color:#f92672">/&lt;/span>&lt;span style="color:#ae81ff">2&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> y &lt;span style="color:#f92672">=&lt;/span> playground&lt;span style="color:#f92672">.&lt;/span>h&lt;span style="color:#f92672">/&lt;/span>&lt;span style="color:#ae81ff">2&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">class&lt;/span> &lt;span style="color:#a6e22e">StartingCoord&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> x &lt;span style="color:#f92672">=&lt;/span> Center&lt;span style="color:#f92672">.&lt;/span>x &lt;span style="color:#f92672">-&lt;/span> ((group_grid_width &lt;span style="color:#f92672">-&lt;/span> &lt;span style="color:#ae81ff">1&lt;/span>) &lt;span style="color:#f92672">*&lt;/span> interval &lt;span style="color:#f92672">/&lt;/span> &lt;span style="color:#ae81ff">2&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> y &lt;span style="color:#f92672">=&lt;/span> Center&lt;span style="color:#f92672">.&lt;/span>y &lt;span style="color:#f92672">-&lt;/span> ((group_grid_width &lt;span style="color:#f92672">-&lt;/span> &lt;span style="color:#ae81ff">1&lt;/span>) &lt;span style="color:#f92672">*&lt;/span> interval &lt;span style="color:#f92672">/&lt;/span> &lt;span style="color:#ae81ff">2&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> self&lt;span style="color:#f92672">.&lt;/span>unit_index &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> peasants &lt;span style="color:#f92672">=&lt;/span> []
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">for&lt;/span> i &lt;span style="color:#f92672">in&lt;/span> range(group_grid_width):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">for&lt;/span> j &lt;span style="color:#f92672">in&lt;/span> range(group_grid_width):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> new_unit &lt;span style="color:#f92672">=&lt;/span> self&lt;span style="color:#f92672">.&lt;/span>Unit(self&lt;span style="color:#f92672">.&lt;/span>unit_index)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> new_unit&lt;span style="color:#f92672">.&lt;/span>x &lt;span style="color:#f92672">=&lt;/span> StartingCoord&lt;span style="color:#f92672">.&lt;/span>x &lt;span style="color:#f92672">+&lt;/span> (interval &lt;span style="color:#f92672">*&lt;/span> i)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> new_unit&lt;span style="color:#f92672">.&lt;/span>y &lt;span style="color:#f92672">=&lt;/span> StartingCoord&lt;span style="color:#f92672">.&lt;/span>y &lt;span style="color:#f92672">+&lt;/span> (interval &lt;span style="color:#f92672">*&lt;/span> j)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> new_unit&lt;span style="color:#f92672">.&lt;/span>phi &lt;span style="color:#f92672">=&lt;/span> random&lt;span style="color:#f92672">.&lt;/span>random() &lt;span style="color:#f92672">*&lt;/span> &lt;span style="color:#ae81ff">360&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> peasants&lt;span style="color:#f92672">.&lt;/span>append(new_unit)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> self&lt;span style="color:#f92672">.&lt;/span>unit_index &lt;span style="color:#f92672">+=&lt;/span> &lt;span style="color:#ae81ff">1&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">return&lt;/span> peasants
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#a6e22e">@classmethod&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">print_peasants_coordinates&lt;/span>(cls, l:list[Unit]):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">for&lt;/span> unit &lt;span style="color:#f92672">in&lt;/span> l:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> print(&lt;span style="color:#e6db74">f&lt;/span>&lt;span style="color:#e6db74">&amp;#34;Peasant &lt;/span>&lt;span style="color:#e6db74">{&lt;/span>unit&lt;span style="color:#f92672">.&lt;/span>i&lt;span style="color:#e6db74">}&lt;/span>&lt;span style="color:#e6db74">: (&lt;/span>&lt;span style="color:#e6db74">{&lt;/span>unit&lt;span style="color:#f92672">.&lt;/span>x&lt;span style="color:#e6db74">}&lt;/span>&lt;span style="color:#e6db74">, &lt;/span>&lt;span style="color:#e6db74">{&lt;/span>unit&lt;span style="color:#f92672">.&lt;/span>y&lt;span style="color:#e6db74">}&lt;/span>&lt;span style="color:#e6db74">), v = &lt;/span>&lt;span style="color:#e6db74">{&lt;/span>unit&lt;span style="color:#f92672">.&lt;/span>v&lt;span style="color:#e6db74">}&lt;/span>&lt;span style="color:#e6db74">&amp;#34;&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">return&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#a6e22e">@classmethod&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">print_peasant_coordinates&lt;/span>(cls, u:Unit):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> print(&lt;span style="color:#e6db74">f&lt;/span>&lt;span style="color:#e6db74">&amp;#34;Peasant &lt;/span>&lt;span style="color:#e6db74">{&lt;/span>u&lt;span style="color:#f92672">.&lt;/span>i&lt;span style="color:#e6db74">}&lt;/span>&lt;span style="color:#e6db74">: (&lt;/span>&lt;span style="color:#e6db74">{&lt;/span>u&lt;span style="color:#f92672">.&lt;/span>x&lt;span style="color:#e6db74">}&lt;/span>&lt;span style="color:#e6db74">, &lt;/span>&lt;span style="color:#e6db74">{&lt;/span>u&lt;span style="color:#f92672">.&lt;/span>y&lt;span style="color:#e6db74">}&lt;/span>&lt;span style="color:#e6db74">), phi = &lt;/span>&lt;span style="color:#e6db74">{&lt;/span>u&lt;span style="color:#f92672">.&lt;/span>phi&lt;span style="color:#e6db74">}&lt;/span>&lt;span style="color:#e6db74">° v = &lt;/span>&lt;span style="color:#e6db74">{&lt;/span>u&lt;span style="color:#f92672">.&lt;/span>v&lt;span style="color:#e6db74">}&lt;/span>&lt;span style="color:#e6db74">&amp;#34;&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">return&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#a6e22e">@classmethod&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">update_position&lt;/span>(cls, u: Unit, p: Playground):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> u&lt;span style="color:#f92672">.&lt;/span>x &lt;span style="color:#f92672">+=&lt;/span> u&lt;span style="color:#f92672">.&lt;/span>v &lt;span style="color:#f92672">*&lt;/span> math&lt;span style="color:#f92672">.&lt;/span>cos(math&lt;span style="color:#f92672">.&lt;/span>radians(u&lt;span style="color:#f92672">.&lt;/span>phi))
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> u&lt;span style="color:#f92672">.&lt;/span>y &lt;span style="color:#f92672">+=&lt;/span> u&lt;span style="color:#f92672">.&lt;/span>v &lt;span style="color:#f92672">*&lt;/span> math&lt;span style="color:#f92672">.&lt;/span>sin(math&lt;span style="color:#f92672">.&lt;/span>radians(u&lt;span style="color:#f92672">.&lt;/span>phi))
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> u&lt;span style="color:#f92672">.&lt;/span>x &lt;span style="color:#f92672">=&lt;/span> u&lt;span style="color:#f92672">.&lt;/span>x &lt;span style="color:#f92672">%&lt;/span> p&lt;span style="color:#f92672">.&lt;/span>w
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> u&lt;span style="color:#f92672">.&lt;/span>y &lt;span style="color:#f92672">=&lt;/span> u&lt;span style="color:#f92672">.&lt;/span>y &lt;span style="color:#f92672">%&lt;/span> p&lt;span style="color:#f92672">.&lt;/span>h
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#a6e22e">@classmethod&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">point_in_triangle&lt;/span>(cls, p, t_1, t_2, t_3):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e"># https://stackoverflow.com/questions/2049582/how-to-determine-if-a-point-is-in-a-2d-triangle&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">sign&lt;/span>(p_1, p_2, p_3):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">return&lt;/span> (p_1[&lt;span style="color:#ae81ff">0&lt;/span>] &lt;span style="color:#f92672">-&lt;/span> p_3[&lt;span style="color:#ae81ff">0&lt;/span>]) &lt;span style="color:#f92672">*&lt;/span> (p_2[&lt;span style="color:#ae81ff">1&lt;/span>] &lt;span style="color:#f92672">-&lt;/span> p_3[&lt;span style="color:#ae81ff">1&lt;/span>]) &lt;span style="color:#f92672">-&lt;/span> (p_2[&lt;span style="color:#ae81ff">0&lt;/span>] &lt;span style="color:#f92672">-&lt;/span> p_3[&lt;span style="color:#ae81ff">0&lt;/span>]) &lt;span style="color:#f92672">*&lt;/span> (p_1[&lt;span style="color:#ae81ff">1&lt;/span>] &lt;span style="color:#f92672">-&lt;/span> p_3[&lt;span style="color:#ae81ff">1&lt;/span>])
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> d1 &lt;span style="color:#f92672">=&lt;/span> sign(p, t_1, t_2)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> d2 &lt;span style="color:#f92672">=&lt;/span> sign(p, t_2, t_3)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> d3 &lt;span style="color:#f92672">=&lt;/span> sign(p, t_3, t_1)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> has_neg &lt;span style="color:#f92672">=&lt;/span> (d1 &lt;span style="color:#f92672">&amp;lt;&lt;/span> &lt;span style="color:#ae81ff">0&lt;/span>) &lt;span style="color:#f92672">or&lt;/span> (d2 &lt;span style="color:#f92672">&amp;lt;&lt;/span> &lt;span style="color:#ae81ff">0&lt;/span>) &lt;span style="color:#f92672">or&lt;/span> (d3 &lt;span style="color:#f92672">&amp;lt;&lt;/span> &lt;span style="color:#ae81ff">0&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> has_pos &lt;span style="color:#f92672">=&lt;/span> (d1 &lt;span style="color:#f92672">&amp;gt;&lt;/span> &lt;span style="color:#ae81ff">0&lt;/span>) &lt;span style="color:#f92672">or&lt;/span> (d2 &lt;span style="color:#f92672">&amp;gt;&lt;/span> &lt;span style="color:#ae81ff">0&lt;/span>) &lt;span style="color:#f92672">or&lt;/span> (d3 &lt;span style="color:#f92672">&amp;gt;&lt;/span> &lt;span style="color:#ae81ff">0&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">return&lt;/span> &lt;span style="color:#f92672">not&lt;/span> (has_neg &lt;span style="color:#f92672">and&lt;/span> has_pos)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#a6e22e">@classmethod&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">get_distance&lt;/span>(cls, p1, p2):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">return&lt;/span> math&lt;span style="color:#f92672">.&lt;/span>sqrt((p1[&lt;span style="color:#ae81ff">0&lt;/span>] &lt;span style="color:#f92672">-&lt;/span> p2[&lt;span style="color:#ae81ff">0&lt;/span>])&lt;span style="color:#f92672">**&lt;/span>&lt;span style="color:#ae81ff">2&lt;/span> &lt;span style="color:#f92672">+&lt;/span> (p1[&lt;span style="color:#ae81ff">1&lt;/span>] &lt;span style="color:#f92672">-&lt;/span> p2[&lt;span style="color:#ae81ff">1&lt;/span>])&lt;span style="color:#f92672">**&lt;/span>&lt;span style="color:#ae81ff">2&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">get_all_unit_in_eye_sight&lt;/span>(self, u: Unit, fov: float &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">90.0&lt;/span>, social_distance: float &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">20.0&lt;/span>, view_distance: float &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">300.0&lt;/span>) &lt;span style="color:#f92672">-&amp;gt;&lt;/span> list[Unit]:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> res &lt;span style="color:#f92672">=&lt;/span> []
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> vertex_1 &lt;span style="color:#f92672">=&lt;/span> (u&lt;span style="color:#f92672">.&lt;/span>x, u&lt;span style="color:#f92672">.&lt;/span>y)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> vertex_2 &lt;span style="color:#f92672">=&lt;/span> (u&lt;span style="color:#f92672">.&lt;/span>x &lt;span style="color:#f92672">+&lt;/span> math&lt;span style="color:#f92672">.&lt;/span>cos(math&lt;span style="color:#f92672">.&lt;/span>radians(u&lt;span style="color:#f92672">.&lt;/span>phi&lt;span style="color:#f92672">+&lt;/span>(fov &lt;span style="color:#f92672">/&lt;/span> &lt;span style="color:#ae81ff">2&lt;/span>))) &lt;span style="color:#f92672">*&lt;/span> view_distance, u&lt;span style="color:#f92672">.&lt;/span>y &lt;span style="color:#f92672">+&lt;/span> math&lt;span style="color:#f92672">.&lt;/span>sin(math&lt;span style="color:#f92672">.&lt;/span>radians(u&lt;span style="color:#f92672">.&lt;/span>phi&lt;span style="color:#f92672">+&lt;/span>(fov &lt;span style="color:#f92672">/&lt;/span> &lt;span style="color:#ae81ff">2&lt;/span>))) &lt;span style="color:#f92672">*&lt;/span> view_distance)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> vertex_3 &lt;span style="color:#f92672">=&lt;/span> (u&lt;span style="color:#f92672">.&lt;/span>x &lt;span style="color:#f92672">+&lt;/span> math&lt;span style="color:#f92672">.&lt;/span>cos(math&lt;span style="color:#f92672">.&lt;/span>radians(u&lt;span style="color:#f92672">.&lt;/span>phi&lt;span style="color:#f92672">-&lt;/span>(fov &lt;span style="color:#f92672">/&lt;/span> &lt;span style="color:#ae81ff">2&lt;/span>))) &lt;span style="color:#f92672">*&lt;/span> view_distance, u&lt;span style="color:#f92672">.&lt;/span>y &lt;span style="color:#f92672">+&lt;/span> math&lt;span style="color:#f92672">.&lt;/span>sin(math&lt;span style="color:#f92672">.&lt;/span>radians(u&lt;span style="color:#f92672">.&lt;/span>phi&lt;span style="color:#f92672">-&lt;/span>(fov &lt;span style="color:#f92672">/&lt;/span> &lt;span style="color:#ae81ff">2&lt;/span>))) &lt;span style="color:#f92672">*&lt;/span> view_distance)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e"># Now we have one triangle&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">for&lt;/span> peasant &lt;span style="color:#f92672">in&lt;/span> self&lt;span style="color:#f92672">.&lt;/span>peasants:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">if&lt;/span> peasant&lt;span style="color:#f92672">.&lt;/span>i &lt;span style="color:#f92672">==&lt;/span> u&lt;span style="color:#f92672">.&lt;/span>i:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">continue&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">if&lt;/span> self&lt;span style="color:#f92672">.&lt;/span>point_in_triangle((peasant&lt;span style="color:#f92672">.&lt;/span>x, peasant&lt;span style="color:#f92672">.&lt;/span>y), vertex_1, vertex_2, vertex_3) &lt;span style="color:#f92672">or&lt;/span> self&lt;span style="color:#f92672">.&lt;/span>get_distance((u&lt;span style="color:#f92672">.&lt;/span>x, u&lt;span style="color:#f92672">.&lt;/span>y), (peasant&lt;span style="color:#f92672">.&lt;/span>x, peasant&lt;span style="color:#f92672">.&lt;/span>y)) &lt;span style="color:#f92672">&amp;lt;=&lt;/span> social_distance:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> res&lt;span style="color:#f92672">.&lt;/span>append(peasant)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">return&lt;/span> res
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">get_all_unit_nearby&lt;/span>(self, u: Unit, fov: float &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">90.0&lt;/span>, social_distance: float &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">50.0&lt;/span>, view_distance: float &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">300.0&lt;/span>) &lt;span style="color:#f92672">-&amp;gt;&lt;/span> list[Unit]:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> res &lt;span style="color:#f92672">=&lt;/span> []
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e"># Now we have one triangle&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">for&lt;/span> peasant &lt;span style="color:#f92672">in&lt;/span> self&lt;span style="color:#f92672">.&lt;/span>peasants:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">if&lt;/span> peasant&lt;span style="color:#f92672">.&lt;/span>i &lt;span style="color:#f92672">==&lt;/span> u&lt;span style="color:#f92672">.&lt;/span>i:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">continue&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">if&lt;/span> self&lt;span style="color:#f92672">.&lt;/span>get_distance((u&lt;span style="color:#f92672">.&lt;/span>x, u&lt;span style="color:#f92672">.&lt;/span>y), (peasant&lt;span style="color:#f92672">.&lt;/span>x, peasant&lt;span style="color:#f92672">.&lt;/span>y)) &lt;span style="color:#f92672">&amp;lt;=&lt;/span> social_distance:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> res&lt;span style="color:#f92672">.&lt;/span>append(peasant)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">return&lt;/span> res
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#a6e22e">@classmethod&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">combine_force_list&lt;/span>(cls, l_force: list, l_weight: list &lt;span style="color:#f92672">=&lt;/span> []):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> final_force_cart &lt;span style="color:#f92672">=&lt;/span> [&lt;span style="color:#ae81ff">0&lt;/span>, &lt;span style="color:#ae81ff">0&lt;/span>]
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">if&lt;/span> len(l_weight) &lt;span style="color:#f92672">==&lt;/span> &lt;span style="color:#ae81ff">0&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> actual_weight &lt;span style="color:#f92672">=&lt;/span> [&lt;span style="color:#ae81ff">1&lt;/span>] &lt;span style="color:#f92672">*&lt;/span> len(l_force)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">else&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> actual_weight &lt;span style="color:#f92672">=&lt;/span> l_weight
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">for&lt;/span> i &lt;span style="color:#f92672">in&lt;/span> range(len(l_force)):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> (x, y) &lt;span style="color:#f92672">=&lt;/span> pol2cart(l_force[i][&lt;span style="color:#ae81ff">0&lt;/span>], l_force[i][&lt;span style="color:#ae81ff">1&lt;/span>])
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> final_force_cart[&lt;span style="color:#ae81ff">0&lt;/span>] &lt;span style="color:#f92672">+=&lt;/span> x &lt;span style="color:#f92672">*&lt;/span> actual_weight[i]
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> final_force_cart[&lt;span style="color:#ae81ff">1&lt;/span>] &lt;span style="color:#f92672">+=&lt;/span> y &lt;span style="color:#f92672">*&lt;/span> actual_weight[i]
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> final_force_rad &lt;span style="color:#f92672">=&lt;/span> cart2pol(final_force_cart[&lt;span style="color:#ae81ff">0&lt;/span>], final_force_cart[&lt;span style="color:#ae81ff">1&lt;/span>])
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">return&lt;/span> final_force_rad
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#a6e22e">@classmethod&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">distance_between_point_and_line&lt;/span>(cls, _lv1, _lv2, _p):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> lv1 &lt;span style="color:#f92672">=&lt;/span> np&lt;span style="color:#f92672">.&lt;/span>array(_lv1)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> lv2 &lt;span style="color:#f92672">=&lt;/span> np&lt;span style="color:#f92672">.&lt;/span>array(_lv2)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> p &lt;span style="color:#f92672">=&lt;/span> np&lt;span style="color:#f92672">.&lt;/span>array(_p)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">return&lt;/span> np&lt;span style="color:#f92672">.&lt;/span>abs(np&lt;span style="color:#f92672">.&lt;/span>cross(lv2&lt;span style="color:#f92672">-&lt;/span>lv1, lv1&lt;span style="color:#f92672">-&lt;/span>p)) &lt;span style="color:#f92672">/&lt;/span> np&lt;span style="color:#f92672">.&lt;/span>linalg&lt;span style="color:#f92672">.&lt;/span>norm(lv2&lt;span style="color:#f92672">-&lt;/span>lv1)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#a6e22e">@classmethod&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">force_against_the_walls&lt;/span>(cls, u: Unit, p: Playground):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> v1 &lt;span style="color:#f92672">=&lt;/span> (&lt;span style="color:#ae81ff">0.0&lt;/span>, &lt;span style="color:#ae81ff">0.0&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> v2 &lt;span style="color:#f92672">=&lt;/span> (&lt;span style="color:#ae81ff">0.0&lt;/span>, p&lt;span style="color:#f92672">.&lt;/span>h)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> v3 &lt;span style="color:#f92672">=&lt;/span> (p&lt;span style="color:#f92672">.&lt;/span>w, &lt;span style="color:#ae81ff">0.0&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> v4 &lt;span style="color:#f92672">=&lt;/span> (p&lt;span style="color:#f92672">.&lt;/span>w, p&lt;span style="color:#f92672">.&lt;/span>h)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> s &lt;span style="color:#f92672">=&lt;/span> (u&lt;span style="color:#f92672">.&lt;/span>x, u&lt;span style="color:#f92672">.&lt;/span>y)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> c &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">200.0&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e"># Wall 1 v1-v2&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> d1 &lt;span style="color:#f92672">=&lt;/span> cls&lt;span style="color:#f92672">.&lt;/span>distance_between_point_and_line(v1, v2, s)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> f1 &lt;span style="color:#f92672">=&lt;/span> (&lt;span style="color:#ae81ff">90.0&lt;/span>, c &lt;span style="color:#f92672">/&lt;/span> d1)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e"># Wall 2 v1-v3&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> d2 &lt;span style="color:#f92672">=&lt;/span> cls&lt;span style="color:#f92672">.&lt;/span>distance_between_point_and_line(v1, v3, s)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> f2 &lt;span style="color:#f92672">=&lt;/span> (&lt;span style="color:#ae81ff">180.0&lt;/span>, c &lt;span style="color:#f92672">/&lt;/span> d2)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e"># Wall 3 v4-v2&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> d3 &lt;span style="color:#f92672">=&lt;/span> cls&lt;span style="color:#f92672">.&lt;/span>distance_between_point_and_line(v4, v2, s)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> f3 &lt;span style="color:#f92672">=&lt;/span> (&lt;span style="color:#ae81ff">0.0&lt;/span>, c &lt;span style="color:#f92672">/&lt;/span> d3)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e"># Wall 4 v4-v3&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> d4 &lt;span style="color:#f92672">=&lt;/span> cls&lt;span style="color:#f92672">.&lt;/span>distance_between_point_and_line(v4, v3, s)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> f4 &lt;span style="color:#f92672">=&lt;/span> (&lt;span style="color:#ae81ff">270.0&lt;/span>, c &lt;span style="color:#f92672">/&lt;/span> d4)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> force_against_the_walls_list &lt;span style="color:#f92672">=&lt;/span> [f1, f2, f3, f4]
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> force_against_the_walls &lt;span style="color:#f92672">=&lt;/span> cls&lt;span style="color:#f92672">.&lt;/span>combine_force_list(force_against_the_walls_list)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">return&lt;/span> force_against_the_walls
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">find_peasant_with_id&lt;/span>(self, i):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">for&lt;/span> u &lt;span style="color:#f92672">in&lt;/span> self&lt;span style="color:#f92672">.&lt;/span>peasants:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">if&lt;/span> u&lt;span style="color:#f92672">.&lt;/span>i &lt;span style="color:#f92672">==&lt;/span> i: &lt;span style="color:#66d9ef">return&lt;/span> u
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">raise&lt;/span> &lt;span style="color:#a6e22e">Exception&lt;/span>(&lt;span style="color:#e6db74">&amp;#39;no such id&amp;#39;&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">update_behavior&lt;/span>(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> self,
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> cohesion_weight: float &lt;span style="color:#f92672">=&lt;/span> WEIGHT_COHESION,
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> separation_weight: float &lt;span style="color:#f92672">=&lt;/span> WEIGHT_SEPARATION,
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> social_distance: float &lt;span style="color:#f92672">=&lt;/span> SOCIAL_DISTANCE,
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> alignment_weight: float &lt;span style="color:#f92672">=&lt;/span> WEIGHT_ALIGNMENT,
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> force_against_wall_weight: float &lt;span style="color:#f92672">=&lt;/span> WEIGHT_FORCE_AGAINST_WALL
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> ):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> new_direction_list &lt;span style="color:#f92672">=&lt;/span> []
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">for&lt;/span> peasant &lt;span style="color:#f92672">in&lt;/span> self&lt;span style="color:#f92672">.&lt;/span>peasants:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> peasants_in_view &lt;span style="color:#f92672">=&lt;/span> self&lt;span style="color:#f92672">.&lt;/span>get_all_unit_in_eye_sight(peasant)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> peasants_nearby &lt;span style="color:#f92672">=&lt;/span> self&lt;span style="color:#f92672">.&lt;/span>get_all_unit_nearby(peasant)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e"># Calculate cohesion&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">if&lt;/span> len(peasants_nearby) &lt;span style="color:#f92672">==&lt;/span> &lt;span style="color:#ae81ff">0&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> cohesion_force &lt;span style="color:#f92672">=&lt;/span> (&lt;span style="color:#ae81ff">0&lt;/span>, &lt;span style="color:#ae81ff">0&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">else&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> average_position_in_view &lt;span style="color:#f92672">=&lt;/span> (
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> statistics&lt;span style="color:#f92672">.&lt;/span>mean(map(&lt;span style="color:#66d9ef">lambda&lt;/span> x: x&lt;span style="color:#f92672">.&lt;/span>x, peasants_nearby)),
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> statistics&lt;span style="color:#f92672">.&lt;/span>mean(map(&lt;span style="color:#66d9ef">lambda&lt;/span> x: x&lt;span style="color:#f92672">.&lt;/span>y, peasants_nearby))
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> )
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> (xs, ys) &lt;span style="color:#f92672">=&lt;/span> pol2cart(peasant&lt;span style="color:#f92672">.&lt;/span>phi, peasant&lt;span style="color:#f92672">.&lt;/span>v)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> cohesion_force &lt;span style="color:#f92672">=&lt;/span> cart2pol((average_position_in_view[&lt;span style="color:#ae81ff">0&lt;/span>]&lt;span style="color:#f92672">-&lt;/span>xs), (average_position_in_view[&lt;span style="color:#ae81ff">1&lt;/span>]&lt;span style="color:#f92672">-&lt;/span>ys))
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e"># Calculate Separation&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> separation_force_list &lt;span style="color:#f92672">=&lt;/span> []
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">for&lt;/span> u &lt;span style="color:#f92672">in&lt;/span> self&lt;span style="color:#f92672">.&lt;/span>peasants:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">if&lt;/span> u&lt;span style="color:#f92672">.&lt;/span>i &lt;span style="color:#f92672">==&lt;/span> peasant&lt;span style="color:#f92672">.&lt;/span>i:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">continue&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">if&lt;/span> self&lt;span style="color:#f92672">.&lt;/span>get_distance((u&lt;span style="color:#f92672">.&lt;/span>x, u&lt;span style="color:#f92672">.&lt;/span>y), (peasant&lt;span style="color:#f92672">.&lt;/span>x, peasant&lt;span style="color:#f92672">.&lt;/span>y)) &lt;span style="color:#f92672">&amp;lt;=&lt;/span> social_distance:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> c &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#f92672">-&lt;/span>&lt;span style="color:#ae81ff">1&lt;/span> &lt;span style="color:#f92672">/&lt;/span> math&lt;span style="color:#f92672">.&lt;/span>sqrt((u&lt;span style="color:#f92672">.&lt;/span>y &lt;span style="color:#f92672">-&lt;/span> peasant&lt;span style="color:#f92672">.&lt;/span>y)&lt;span style="color:#f92672">**&lt;/span>&lt;span style="color:#ae81ff">2&lt;/span> &lt;span style="color:#f92672">+&lt;/span> (u&lt;span style="color:#f92672">.&lt;/span>x &lt;span style="color:#f92672">-&lt;/span> peasant&lt;span style="color:#f92672">.&lt;/span>x)&lt;span style="color:#f92672">**&lt;/span>&lt;span style="color:#ae81ff">2&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> (x, y) &lt;span style="color:#f92672">=&lt;/span> ((u&lt;span style="color:#f92672">.&lt;/span>x &lt;span style="color:#f92672">-&lt;/span> peasant&lt;span style="color:#f92672">.&lt;/span>x) &lt;span style="color:#f92672">*&lt;/span> c, (u&lt;span style="color:#f92672">.&lt;/span>y &lt;span style="color:#f92672">-&lt;/span> peasant&lt;span style="color:#f92672">.&lt;/span>y) &lt;span style="color:#f92672">*&lt;/span> c)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> new_force &lt;span style="color:#f92672">=&lt;/span> cart2pol(x, y)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> separation_force_list&lt;span style="color:#f92672">.&lt;/span>append(new_force)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">if&lt;/span> len(separation_force_list) &lt;span style="color:#f92672">==&lt;/span> &lt;span style="color:#ae81ff">0&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> separation_force &lt;span style="color:#f92672">=&lt;/span> (&lt;span style="color:#ae81ff">0&lt;/span>, &lt;span style="color:#ae81ff">0&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">else&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> separation_force &lt;span style="color:#f92672">=&lt;/span> self&lt;span style="color:#f92672">.&lt;/span>combine_force_list(separation_force_list)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e"># Calculate Alignment&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">if&lt;/span> len(peasants_in_view) &lt;span style="color:#f92672">==&lt;/span> &lt;span style="color:#ae81ff">0&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> alignment_force &lt;span style="color:#f92672">=&lt;/span> (&lt;span style="color:#ae81ff">0&lt;/span>, &lt;span style="color:#ae81ff">0&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">else&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> average_movement_in_view &lt;span style="color:#f92672">=&lt;/span> (
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> statistics&lt;span style="color:#f92672">.&lt;/span>mean(map(&lt;span style="color:#66d9ef">lambda&lt;/span> x: x&lt;span style="color:#f92672">.&lt;/span>phi, peasants_in_view)),
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> statistics&lt;span style="color:#f92672">.&lt;/span>mean(map(&lt;span style="color:#66d9ef">lambda&lt;/span> x: x&lt;span style="color:#f92672">.&lt;/span>v, peasants_in_view))
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> )
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> (xt, yt) &lt;span style="color:#f92672">=&lt;/span> pol2cart(average_movement_in_view[&lt;span style="color:#ae81ff">0&lt;/span>], average_movement_in_view[&lt;span style="color:#ae81ff">1&lt;/span>])
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> (xs, ys) &lt;span style="color:#f92672">=&lt;/span> pol2cart(peasant&lt;span style="color:#f92672">.&lt;/span>phi, peasant&lt;span style="color:#f92672">.&lt;/span>v)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> alignment_force &lt;span style="color:#f92672">=&lt;/span> cart2pol((xt&lt;span style="color:#f92672">-&lt;/span>xs), (yt&lt;span style="color:#f92672">-&lt;/span>ys))
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e"># Calculate force against the wall&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> force_against_wall &lt;span style="color:#f92672">=&lt;/span> self&lt;span style="color:#f92672">.&lt;/span>force_against_the_walls(peasant, self&lt;span style="color:#f92672">.&lt;/span>playground)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> cohesion_force &lt;span style="color:#f92672">=&lt;/span> (cohesion_force[&lt;span style="color:#ae81ff">0&lt;/span>], cohesion_force[&lt;span style="color:#ae81ff">1&lt;/span>]&lt;span style="color:#f92672">**&lt;/span>&lt;span style="color:#ae81ff">0.75&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> alignment_force &lt;span style="color:#f92672">=&lt;/span> (alignment_force[&lt;span style="color:#ae81ff">0&lt;/span>], math&lt;span style="color:#f92672">.&lt;/span>sqrt(alignment_force[&lt;span style="color:#ae81ff">1&lt;/span>]))
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> total_force &lt;span style="color:#f92672">=&lt;/span> self&lt;span style="color:#f92672">.&lt;/span>combine_force_list(
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> [cohesion_force, separation_force, alignment_force, force_against_wall],
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> [cohesion_weight, separation_weight, alignment_weight, force_against_wall_weight]
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> )
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">if&lt;/span> peasant&lt;span style="color:#f92672">.&lt;/span>i &lt;span style="color:#f92672">==&lt;/span> self&lt;span style="color:#f92672">.&lt;/span>leader_id:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> print(&lt;span style="color:#e6db74">f&lt;/span>&lt;span style="color:#e6db74">&amp;#34;c_force:(&lt;/span>&lt;span style="color:#e6db74">{&lt;/span>cohesion_force[&lt;span style="color:#ae81ff">0&lt;/span>]&lt;span style="color:#e6db74">:&lt;/span>&lt;span style="color:#e6db74">.2f&lt;/span>&lt;span style="color:#e6db74">}&lt;/span>&lt;span style="color:#e6db74">°, &lt;/span>&lt;span style="color:#e6db74">{&lt;/span>cohesion_force[&lt;span style="color:#ae81ff">1&lt;/span>]&lt;span style="color:#e6db74">:&lt;/span>&lt;span style="color:#e6db74">.2f&lt;/span>&lt;span style="color:#e6db74">}&lt;/span>&lt;span style="color:#e6db74">m/s) s_force:(&lt;/span>&lt;span style="color:#e6db74">{&lt;/span>separation_force[&lt;span style="color:#ae81ff">0&lt;/span>]&lt;span style="color:#e6db74">:&lt;/span>&lt;span style="color:#e6db74">.2f&lt;/span>&lt;span style="color:#e6db74">}&lt;/span>&lt;span style="color:#e6db74">°, &lt;/span>&lt;span style="color:#e6db74">{&lt;/span>separation_force[&lt;span style="color:#ae81ff">1&lt;/span>]&lt;span style="color:#e6db74">:&lt;/span>&lt;span style="color:#e6db74">.2f&lt;/span>&lt;span style="color:#e6db74">}&lt;/span>&lt;span style="color:#e6db74">m/s) a_force:(&lt;/span>&lt;span style="color:#e6db74">{&lt;/span>alignment_force[&lt;span style="color:#ae81ff">0&lt;/span>]&lt;span style="color:#e6db74">:&lt;/span>&lt;span style="color:#e6db74">.2f&lt;/span>&lt;span style="color:#e6db74">}&lt;/span>&lt;span style="color:#e6db74">°, &lt;/span>&lt;span style="color:#e6db74">{&lt;/span>alignment_force[&lt;span style="color:#ae81ff">1&lt;/span>]&lt;span style="color:#e6db74">:&lt;/span>&lt;span style="color:#e6db74">.2f&lt;/span>&lt;span style="color:#e6db74">}&lt;/span>&lt;span style="color:#e6db74">m/s) f_force:(&lt;/span>&lt;span style="color:#e6db74">{&lt;/span>force_against_wall[&lt;span style="color:#ae81ff">0&lt;/span>]&lt;span style="color:#e6db74">:&lt;/span>&lt;span style="color:#e6db74">.2f&lt;/span>&lt;span style="color:#e6db74">}&lt;/span>&lt;span style="color:#e6db74">°, &lt;/span>&lt;span style="color:#e6db74">{&lt;/span>force_against_wall[&lt;span style="color:#ae81ff">1&lt;/span>]&lt;span style="color:#e6db74">:&lt;/span>&lt;span style="color:#e6db74">.2f&lt;/span>&lt;span style="color:#e6db74">}&lt;/span>&lt;span style="color:#e6db74">m/s)&amp;#34;&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> new_direction_list&lt;span style="color:#f92672">.&lt;/span>append((peasant&lt;span style="color:#f92672">.&lt;/span>i, total_force))
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">for&lt;/span> (_i, (_phi, _v)) &lt;span style="color:#f92672">in&lt;/span> new_direction_list:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> current_peasant &lt;span style="color:#f92672">=&lt;/span> self&lt;span style="color:#f92672">.&lt;/span>peasants[_i]
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> current_peasant&lt;span style="color:#f92672">.&lt;/span>phi &lt;span style="color:#f92672">=&lt;/span> _phi
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> current_peasant&lt;span style="color:#f92672">.&lt;/span>v &lt;span style="color:#f92672">=&lt;/span> min(_v, MAX_SPEED)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">for&lt;/span> peasant &lt;span style="color:#f92672">in&lt;/span> self&lt;span style="color:#f92672">.&lt;/span>peasants:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> self&lt;span style="color:#f92672">.&lt;/span>update_position(peasant, self&lt;span style="color:#f92672">.&lt;/span>playground)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">__init__&lt;/span>(self, group_grid_width: int, interval: float):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> self&lt;span style="color:#f92672">.&lt;/span>playground &lt;span style="color:#f92672">=&lt;/span> self&lt;span style="color:#f92672">.&lt;/span>Playground()
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> self&lt;span style="color:#f92672">.&lt;/span>peasants &lt;span style="color:#f92672">=&lt;/span> self&lt;span style="color:#f92672">.&lt;/span>init_peasants(group_grid_width, self&lt;span style="color:#f92672">.&lt;/span>playground, interval)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> self&lt;span style="color:#f92672">.&lt;/span>leader_id &lt;span style="color:#f92672">=&lt;/span> random&lt;span style="color:#f92672">.&lt;/span>randint(&lt;span style="color:#ae81ff">0&lt;/span>, len(self&lt;span style="color:#f92672">.&lt;/span>peasants)&lt;span style="color:#f92672">-&lt;/span>&lt;span style="color:#ae81ff">1&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> self&lt;span style="color:#f92672">.&lt;/span>plot_x &lt;span style="color:#f92672">=&lt;/span> []
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> self&lt;span style="color:#f92672">.&lt;/span>plot_y &lt;span style="color:#f92672">=&lt;/span> []
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">pass&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">pygame_rot_center&lt;/span>(image, angle, x, y):
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> rotated_image &lt;span style="color:#f92672">=&lt;/span> pygame&lt;span style="color:#f92672">.&lt;/span>transform&lt;span style="color:#f92672">.&lt;/span>rotate(image, angle)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> new_rect &lt;span style="color:#f92672">=&lt;/span> rotated_image&lt;span style="color:#f92672">.&lt;/span>get_rect(center &lt;span style="color:#f92672">=&lt;/span> image&lt;span style="color:#f92672">.&lt;/span>get_rect(center &lt;span style="color:#f92672">=&lt;/span> (x, y))&lt;span style="color:#f92672">.&lt;/span>center)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">return&lt;/span> rotated_image, new_rect
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">def&lt;/span> &lt;span style="color:#a6e22e">main&lt;/span>():
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> run &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#66d9ef">True&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> game &lt;span style="color:#f92672">=&lt;/span> EmergenceBehaviorDemo(&lt;span style="color:#ae81ff">7&lt;/span>, &lt;span style="color:#ae81ff">10.0&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> pygame&lt;span style="color:#f92672">.&lt;/span>init()
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> window &lt;span style="color:#f92672">=&lt;/span> pygame&lt;span style="color:#f92672">.&lt;/span>display&lt;span style="color:#f92672">.&lt;/span>set_mode((game&lt;span style="color:#f92672">.&lt;/span>playground&lt;span style="color:#f92672">.&lt;/span>w, game&lt;span style="color:#f92672">.&lt;/span>playground&lt;span style="color:#f92672">.&lt;/span>h))
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> clock &lt;span style="color:#f92672">=&lt;/span> pygame&lt;span style="color:#f92672">.&lt;/span>time&lt;span style="color:#f92672">.&lt;/span>Clock()
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> pygame_image_fish &lt;span style="color:#f92672">=&lt;/span> pygame&lt;span style="color:#f92672">.&lt;/span>image&lt;span style="color:#f92672">.&lt;/span>load(&lt;span style="color:#e6db74">&amp;#39;fish.png&amp;#39;&lt;/span>)&lt;span style="color:#f92672">.&lt;/span>convert_alpha()
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">while&lt;/span> run:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> clock&lt;span style="color:#f92672">.&lt;/span>tick(FRAMERATE)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">for&lt;/span> event &lt;span style="color:#f92672">in&lt;/span> pygame&lt;span style="color:#f92672">.&lt;/span>event&lt;span style="color:#f92672">.&lt;/span>get():
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">if&lt;/span> event&lt;span style="color:#f92672">.&lt;/span>type &lt;span style="color:#f92672">==&lt;/span> pygame&lt;span style="color:#f92672">.&lt;/span>QUIT:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> run &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#66d9ef">False&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> game&lt;span style="color:#f92672">.&lt;/span>update_behavior()
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> window&lt;span style="color:#f92672">.&lt;/span>fill(GRAY)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">for&lt;/span> peasant &lt;span style="color:#f92672">in&lt;/span> game&lt;span style="color:#f92672">.&lt;/span>peasants:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">if&lt;/span> peasant&lt;span style="color:#f92672">.&lt;/span>i &lt;span style="color:#f92672">==&lt;/span> game&lt;span style="color:#f92672">.&lt;/span>leader_id:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> pygame&lt;span style="color:#f92672">.&lt;/span>draw&lt;span style="color:#f92672">.&lt;/span>rect(window, WHITE, (peasant&lt;span style="color:#f92672">.&lt;/span>x &lt;span style="color:#f92672">-&lt;/span> &lt;span style="color:#ae81ff">5&lt;/span>, peasant&lt;span style="color:#f92672">.&lt;/span>y &lt;span style="color:#f92672">+&lt;/span> &lt;span style="color:#ae81ff">5&lt;/span>, &lt;span style="color:#ae81ff">10&lt;/span>, &lt;span style="color:#ae81ff">10&lt;/span>))
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">else&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> rotated_image, new_rect &lt;span style="color:#f92672">=&lt;/span> pygame_rot_center(pygame_image_fish, (peasant&lt;span style="color:#f92672">.&lt;/span>phi &lt;span style="color:#f92672">+&lt;/span> &lt;span style="color:#ae81ff">270&lt;/span>) &lt;span style="color:#f92672">%&lt;/span> &lt;span style="color:#ae81ff">360&lt;/span>, peasant&lt;span style="color:#f92672">.&lt;/span>x &lt;span style="color:#f92672">-&lt;/span> &lt;span style="color:#ae81ff">5&lt;/span>, peasant&lt;span style="color:#f92672">.&lt;/span>y &lt;span style="color:#f92672">+&lt;/span> &lt;span style="color:#ae81ff">5&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> window&lt;span style="color:#f92672">.&lt;/span>blit(rotated_image, new_rect)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> pygame&lt;span style="color:#f92672">.&lt;/span>display&lt;span style="color:#f92672">.&lt;/span>flip()
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> plt&lt;span style="color:#f92672">.&lt;/span>plot(game&lt;span style="color:#f92672">.&lt;/span>plot_x, game&lt;span style="color:#f92672">.&lt;/span>plot_y, color&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#e6db74">&amp;#39;blue&amp;#39;&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> plt&lt;span style="color:#f92672">.&lt;/span>grid(&lt;span style="color:#66d9ef">True&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> plt&lt;span style="color:#f92672">.&lt;/span>savefig(&lt;span style="color:#e6db74">&amp;#39;foo.png&amp;#39;&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> pygame&lt;span style="color:#f92672">.&lt;/span>quit()
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>main()
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div></description></item><item><title>2025 06 27 数值笔记</title><link>https://mikezom.github.io/posts/2025-06-27-balancing-practice/</link><pubDate>Fri, 27 Jun 2025 00:15:42 +0800</pubDate><guid>https://mikezom.github.io/posts/2025-06-27-balancing-practice/</guid><description>&lt;h2 id="markov-chain-problems">Markov Chain Problems&lt;/h2>
+&lt;h3 id="问题1解谜时间">问题1：解谜时间&lt;/h3>
+&lt;p>你面前有3扇门，&lt;/p>
+&lt;ul>
+&lt;li>第一扇门，进入概率25%，进入后消耗 5 分钟返回。&lt;/li>
+&lt;li>第二扇门，进入概率25%，进入后消耗 10 分钟返回。&lt;/li>
+&lt;li>第三扇门，进入概率50%，进入后消耗 6 分钟后离开。&lt;/li>
+&lt;/ul>
+&lt;p>求离开的期望时间。&lt;/p>
+&lt;hr>
+&lt;p>解：&lt;/p>
+&lt;p>进入第一第二扇门后，都会回到初始状态。也就是说返回后依然需要花费期望时间 $E$ 来离开。所以我们可以列出一下等式：&lt;/p>
+$$ E = 0.25 (5 + E) + 0.25 (10 + E) + 0.5 * 6 $$&lt;p>求得&lt;/p>
+$$ E = 13.5 $$&lt;h3 id="问题2暴击预期打击数">问题2：暴击预期打击数&lt;/h3>
+&lt;p>你面前有1个100血的小怪，你每次击打它时：&lt;/p>
+&lt;ul>
+&lt;li>50% 造成1点伤害。&lt;/li>
+&lt;li>50% 造成2点伤害。&lt;/li>
+&lt;/ul>
+&lt;p>请问期望需要多少次击杀？&lt;/p>
+&lt;hr>
+&lt;p>解：&lt;/p>
+&lt;p>这是一个Markov Chain的Mean Absorbing Time问题&lt;/p>
+&lt;p>假设我们有101个状态，其对应的预期变幻次数为 \(\mu_i\),&lt;/p>
+&lt;p>易得&lt;/p>
+$$
+\begin{aligned}
+\mu_0 &amp;= 0 \\
+\mu_1 &amp;= 1 \\
+\mu_n &amp;= 1 + 0.5 \mu_{n-1} + 0.5 \mu_{n-2}
+\end{aligned}
+$$&lt;p>接下来我们需要将其转换为通项公式，首先利用待定系数法构造等差数列：&lt;/p></description></item><item><title>地牢内宝箱经验分布设计</title><link>https://mikezom.github.io/posts/2025-06-23-interview/</link><pubDate>Mon, 23 Jun 2025 22:23:20 +0800</pubDate><guid>https://mikezom.github.io/posts/2025-06-23-interview/</guid><description>&lt;h2 id="第一个问题设计一个地牢内宝箱的经验分布">第一个问题：设计一个地牢内宝箱的经验分布&lt;/h2>
+&lt;p>我们使用基于玩家探索地牢行为的设计。关注玩家接触到该宝箱时的时间以及预期等级，并以此为自变量设计单个宝箱内经验量。从而推算玩家升级所需经验值。此时，玩家的等级可以被抽象理解为对地牢的探索程度。&lt;/p>
+&lt;p>具体流程如下：&lt;/p>
+&lt;ol>
+&lt;li>计算宝箱权重：我们首先确定每个宝箱被打开所花费的时间，玩家打开该宝箱时的预期等级，将两者相乘便可得到该宝箱打开难度的权重。权重越高，代表该宝箱获取的成本越高。我们将基于该权重设计玩家升级所需的经验值。&lt;/li>
+&lt;li>确定升级路径：我们需要具体关注玩家在每一级时需要打开的宝箱数量，从而确保玩家的升级过程平滑。假设整个地牢内有30个宝箱，其中70%是95%以上玩家通过时会打开的（我们需要保证玩家在错过其中一些宝箱的前提下依然能正常进行游戏）；且随着玩家等级的增加，需要打开的宝箱数量线性增加。此时我们得到了玩家每次升级时需要打开的宝箱数量。&lt;/li>
+&lt;li>推算升级经验：基于玩家升级时需要打开的宝箱数量，我们将特定等级宝箱中打开难度权重较低的对应数量加总，便可以得到玩家在该等级时升级所需要的预期经验值。&lt;/li>
+&lt;/ol>
+&lt;p>该设计的优势：&lt;/p>
+&lt;ul>
+&lt;li>避免“越级打怪”或经验不足的问题，确保玩家在正常探索路径中即可满足升级条件。&lt;/li>
+&lt;li>控制经验冗余，避免玩家通过全图探索获取超量经验。&lt;/li>
+&lt;li>即使玩家通过非预期解提前开启高等级宝箱，也不会因经验获得而打破系统平衡。&lt;/li>
+&lt;/ul>
+&lt;p>衍生问题：&lt;/p>
+&lt;ol>
+&lt;li>对于已经深入迷宫的玩家而言，前期岔路内的高级宝箱比后期主线宝箱所需要的获取时间长，此时如何平衡获取难易度与宝箱经验之间的关系？我的想法是可以为前期较难获取的宝箱设计额外的，与升级无关的奖励（如称号等），从而给玩家提供成就感。&lt;/li>
+&lt;/ol>
+&lt;h2 id="第二个问题基于上题设计玩家装备随等级提升的曲线以及对应等级怪物的数值曲线">第二个问题：基于上题，设计玩家装备随等级提升的曲线，以及对应等级怪物的数值曲线&lt;/h2>
+&lt;p>我们基于玩家时间投入，关注玩家的战斗时间消耗以及玩家的战斗频率，以此为确定玩家的单次战斗时间。之后固定玩家的秒伤曲线以确保养成带来的反馈观感后，根据单次战斗时间推算玩家的数值以及怪物的血量。再基于玩家装备提供数值在总数值中的占比，推算玩家的装备随等级提升的曲线。&lt;/p>
+&lt;p>具体流程如下：&lt;/p>
+&lt;ol>
+&lt;li>确定单次战斗时间：我们首先确定玩家每一级的升级所需时间、战斗时间在其中的占比、以及升级所期望的战斗频率。从而得到玩家在具体等级期望的单次平级战斗时间。&lt;/li>
+&lt;li>预设秒伤曲线：我们利用指数函数以及秒伤初始值预设玩家的秒伤。这里我使用的函数为&lt;code>秒伤 = 20*1.071^(玩家等级-1)&lt;/code>，即每提升10级玩家的秒伤翻倍，提供给玩家稳定的成长反馈。&lt;/li>
+&lt;li>确定怪物血量：根据玩家秒伤与单次平级战斗时间确定怪物的血量。&lt;/li>
+&lt;li>推算装备成长曲线：根据玩家秒伤确定玩家的数值（具体攻击力、暴击等）。之后，根据玩家装备在数值中的预期占比，确定玩家装备随等级提升的曲线。&lt;/li>
+&lt;/ol>
+&lt;p>额外考虑要素：&lt;/p>
+&lt;ol>
+&lt;li>平级、压级、越级战斗：玩家在游戏过程中会不可避免的遇到压级或越级战斗。为保证玩家体验，我们需要根据目标玩家群体来确定玩家的越级能力（动作类游戏偏高，回合制游戏偏低）。&lt;/li>
+&lt;li>boss的额外奖励、分段函数：玩家在击败boss后，会预期获取一个与其难度对应的奖励，若该奖励被设计为战力奖励，那么玩家会预期获得一个较大的战力提升。此时如果使用较为平滑的曲线，玩家将会难以察觉到自己的战力提升。我们可以使用分段函数来确定玩家的秒伤，如&lt;code>秒伤 = 20*1.071^(玩家等级-1)*(1.33^ROUNDDOWN(玩家等级/10,0))&lt;/code>，此时玩家每过10级会有一个额外的33%提升，令玩家打过boss后的正反馈更加明显。使用这一公式还会增强破序惩罚：若玩家在打过第一个地牢的boss前就去尝试挑战第二个地牢，由于第二个地牢怪物战力是以玩家击败第一个boss为前提设计的，其战力不足会更容易暴露，从而引导玩家按照预期路线推进游戏。&lt;/li>
+&lt;li>装备迭代的压力：获取装备需要消耗时间成本，若玩家获取装备的流程不能耦合在玩家的升级过程中，那么玩家便需要频繁进行额外的操作来赶上怪物等级提升的速度&lt;/li>
+&lt;/ol></description></item><item><title>QQ14经验值随笔</title><link>https://mikezom.github.io/posts/2025-06-20-qq14/</link><pubDate>Mon, 23 Jun 2025 19:39:50 +0800</pubDate><guid>https://mikezom.github.io/posts/2025-06-20-qq14/</guid><description>&lt;p>如果要我去填QQ14的经验值曲线，我会怎么填？&lt;/p>
+&lt;h2 id="基于玩家游戏时间的经验值设计思路">基于玩家游戏时间的经验值设计思路&lt;/h2>
+&lt;p>一切从玩家游戏时间开始。玩家在QQ14的游戏时间主要由副本与任务构成。对于每名玩家的第一个职业而言，玩家的前期时间完全由任务构成；中期由完成任务为主导，攻略副本为辅助；后期则由攻略副本为主导，完成任务为辅助。&lt;/p>
+&lt;p>我们的经验公式大致如下所示：&lt;/p>
+$$升级所需经验值(等级) = \frac{\sum{该等级主线任务经验}}{主线任务占该等级游玩体验比(等级)}$$$$单个任务经验 = 等级 \times 任务完成时间$$&lt;h3 id="可能面临的问题以及其他细节">可能面临的问题以及其他细节&lt;/h3>
+&lt;h4 id="1-开风脉开地图击杀小怪等杂项经验如何填写">1. 开风脉、开地图、击杀小怪等杂项经验如何填写？&lt;/h4>
+&lt;p>&lt;strong>这些经验的填写核心与预期副职业的升级效率与第一职业的升级效率比有关。&lt;/strong> 玩家主要会在提升副职业等级时利用到这些杂项经验，所以若我们希望玩家提升副职业等级时的效率为主职业的1/4，那我们应该把这些杂项经验的公式后乘上1/4。我们预期玩家在不采用一次性经验时提升副职业等级所花费的总时间为提升主职业时的4倍。&lt;/p>
+&lt;p>我们将杂项经验按照其可获取数量分为两类：&lt;/p>
+&lt;ul>
+&lt;li>一次性经验（探索）&lt;/li>
+&lt;li>可重复刷取经验（战斗、fate等）&lt;/li>
+&lt;/ul>
+&lt;p>这些经验应该与预期玩家获取时的等级以及其在玩家经验构成中的占比相关，而具体的经验计算应该与预期玩家行为相关。而这些杂项经验的经验获取效率应该比玩家正常完成主线要低很多，其中可重复刷取经验会更低。&lt;/p>
+&lt;p>举例来说，探索经验与探索行为相关。玩家通过在大世界花费时间移动来探索，花费时间越多理应获取经验越高，所以探索经验应该与最短移动时间成正比。由于玩家可以在大地图中任意切换职业，我们希望避免玩家切换低级职业领取高级地图探索奖励的情况，所以获取的探索经验应该和玩家探索时采用的职业等级成正比。最后，我们需要乘上相比副职业的升级效率常数更高的常数（因为一次性的资源更加稀缺）。得到如下公式：&lt;/p>
+$$单区域探索经验 = 玩家目前等级 \times 最短移动时间 \times 0.5$$&lt;h4 id="2-攻略副本的经验具体如何填写">2. 攻略副本的经验具体如何填写？&lt;/h4>
+&lt;p>攻略副本的经验获取效率应低于完成主线的经验获取效率。我们预期玩家提升副职业时的主要经验获取为攻略副本。以玩家游戏时间为基础，我们可以很容易的得到以下公式：&lt;/p>
+$$副本总经验 = 预期玩家等级 \times 预期完成时间 \times 0.25$$&lt;p>而日常任务的获取效率会是更高的，需要将最后的常数提高。&lt;/p>
+&lt;h4 id="3-主线任务占该等级游玩体验比如何设计">3. 主线任务占该等级游玩体验比如何设计？&lt;/h4>
+&lt;p>我们将玩家的战斗过程分为以下几个阶段：&lt;/p>
+&lt;ul>
+&lt;li>熟悉游戏阶段&lt;/li>
+&lt;li>适应游戏阶段&lt;/li>
+&lt;li>(高难挑战阶段)&lt;/li>
+&lt;/ul>
+&lt;p>玩家的等级提升应该在熟悉游戏阶段到适应游戏阶段之间。所以玩家的游玩体验中，随着等级的逐渐提升，主线任务的占比应该逐渐降低。对于游戏前期而言，我们希望玩家升级的门槛尽可能低，以增加玩家留存率。所以对于1级的玩家，主线任务的占比可以被设为100%。对于最后一级而言，主线任务的占比应该根据玩家主线所有副本经验计算得到。计算的目的是玩家完成全部主线任务并第一遍通关主线副本可以获得足够的经验升至满级。而中期的经验占比可以使用线性函数获取。&lt;/p>
+&lt;h4 id="4-没有主线的等级">4. 没有主线的等级？&lt;/h4>
+&lt;p>在QA过程中，我们需要避免以下情况：玩家在做出了必要最少程度的经验获取，之后在某一个等级无法通过主线和必要的副本获取足够量的经验接取下一级的主线。这一情况很可能会打破玩家的心流，从而降低玩家的留存概率。&lt;/p>
+&lt;h4 id="5-经验值的观感">5. 经验值的观感？&lt;/h4>
+&lt;p>基于前文中提到的经验值计算，我们有可能会面临经验值需求不随着等级增长的情况。当一个等级中的主线任务耗时过长，便可能会诱发这种情况。我们可以通过和策划沟通修改部分主线任务的预期等级来解决这个问题，也可以通过计算最后规范化数值来解决这个问题。前者是一个更好的解决方案，后者在实现过程中则需要注意修改其他经验获取途径的经验值获取。&lt;/p></description></item><item><title>碧蓝幻想战斗数值的设计推导以及反拆</title><link>https://mikezom.github.io/posts/2025-06-23-gbf/</link><pubDate>Mon, 23 Jun 2025 18:31:09 +0800</pubDate><guid>https://mikezom.github.io/posts/2025-06-23-gbf/</guid><description>&lt;p>❗ &lt;strong>This article was written in 2025.04&lt;/strong> ❗&lt;/p>
+&lt;h2 id="前言">前言&lt;/h2>
+&lt;p>Granblue Fantasy（以下简称GBF）是一款网页端/移动端长线运营小队战斗RPG，除去其较高的美术水平外，核心乐趣点在于养成所带来的战斗数值提升。GBF运营至今能够通过其数值设计不断给玩家提供完成每日任务、参与活动的动力，说明其数值设计值得我们对此进行推导拆解分析。&lt;/p>
+&lt;h2 id="gbf战斗系统说明">GBF战斗系统说明&lt;/h2>
+&lt;p>GBF的战斗系统以小队为单位，每个小队由【主角】、3名【角色】、【武器盘】、【召唤石】构成。武器盘和召唤石决定了玩家的基础伤害。特殊的武器盘和召唤石会提供一些效果影响伤害的结算。&lt;/p>
+&lt;p>实际战斗时为回合制战斗，每回合玩家可以使用主角或角色的技能、召唤石的技能，在使用想要使用的技能之后玩家点击攻击结束自己的操作；之后主角和其他角色依次进行一次普通攻击，最后怪物行动。&lt;/p>
+&lt;h2 id="战斗公式设计推导">战斗公式设计推导&lt;/h2>
+&lt;h3 id="目标以及场景拆解">目标以及场景拆解&lt;/h3>
+&lt;p>GBF数值设计的目标主要包括以下两点：&lt;/p>
+&lt;ul>
+&lt;li>【&lt;strong>保证数值主导的正反馈循环&lt;/strong>】因为战斗是游戏的主体，所以需要保证玩家在时间游玩中，对时间和资源投入的成长有足够的感知。为此，我们希望满足以下目标：
+&lt;ul>
+&lt;li>玩家经过养成，能够获得可感知的战斗数值提升&lt;/li>
+&lt;li>战斗数值的膨胀应该对于长线运营有较高的兼容度&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>【&lt;strong>确保不同氪金量玩家体验&lt;/strong>】氪金玩家对于非氪金玩家不应该形成完全碾压&lt;/li>
+&lt;/ul>
+&lt;p>战斗场景：&lt;/p>
+&lt;ul>
+&lt;li>完全没有PVP。PVE场景包括多人或单人。&lt;/li>
+&lt;li>玩家的养成主要通过多人PVE。&lt;/li>
+&lt;li>玩家的成果检验主要通过单人PVE。&lt;/li>
+&lt;/ul>
+&lt;h3 id="数值框架搭建">数值框架搭建&lt;/h3>
+&lt;p>基于目标以及场景，我们给出一个基于养成模块的伤害计算公式。&lt;/p>
+$$
+\begin{aligned}
+伤害 =&amp;\ (预期伤害 \times 乘算调整区 + 加算调整区) \times 最终乘算调整区 + 最终加算调整区
+\\
+\text{其中，}
+\\
+预期伤害 =&amp;\ 养成伤害 \times 怪物减伤率 \\
+=&amp;\ \Pi_{养成模块} 单模块调整值 \times 怪物减伤率\\
+\end{aligned}
+$$&lt;p>默认乘算调整区、加算调整区、最终乘算调整区、最终加算调整区不影响伤害结算。&lt;/p>
+&lt;p>由于玩家的战斗场景均为PVE，故可以通过手动投放怪物减伤率的方式控制玩家体验（默认10%减伤，特殊战斗特殊对待）。&lt;/p>
+&lt;h3 id="观察游戏机制细化计算公式">观察游戏机制，细化计算公式&lt;/h3>
+&lt;p>观察到：&lt;/p>
+&lt;ul>
+&lt;li>游戏内有主角等级、武器盘、召唤石等养成模块。&lt;/li>
+&lt;li>武器盘内的武器可以提供各类效果增幅伤害，召唤石可以增幅武器盘内武器的效果，或直接增幅伤害。&lt;/li>
+&lt;li>战斗中有部分技能可以增幅伤害，或给怪物增加&amp;quot;破防XX%&amp;ldquo;的debuff。&lt;/li>
+&lt;li>战斗中不同技能的倍率不同，且可以出现暴击&lt;/li>
+&lt;li>【特殊机制】战斗中有元素克制关系&lt;/li>
+&lt;/ul>
+&lt;p>根据观察到的结果，我们对养成伤害、怪物减伤调整区公式进行细化：&lt;/p>
+$$
+\begin{aligned}
+乘算调整区 =&amp;\ \Pi_{乘算调整模块} 单模块调整值 \\
+乘算调整模块 =&amp;\ \set{伤害倍率、元素克制调整值、暴击调整值} \\
+养成模块 =&amp;\ \set{基础伤害、武器盘调整值、召唤石调整值} \\
+怪物减伤调整区 =&amp;\ 1 - f(怪物减伤值)
+\end{aligned}
+$$&lt;h3 id="模块计算方式假设">模块计算方式假设&lt;/h3>
+&lt;p>我们假设以下情况：&lt;/p></description></item><item><title>Scythe</title><link>https://mikezom.github.io/posts/2025-06-18-scythe/</link><pubDate>Wed, 18 Jun 2025 12:35:49 +0800</pubDate><guid>https://mikezom.github.io/posts/2025-06-18-scythe/</guid><description>&lt;p>❗ &lt;strong>This article was written in 2021&lt;/strong> ❗&lt;/p>
+&lt;h1 id="scythe">SCYTHE&lt;/h1>
+&lt;h2 id="一前言">一、前言&lt;/h2>
+&lt;p>《镰刀战争》是一款由Jamey Stegmaier设计的3.5X（探索、扩张、开发、半对抗）桌游，主题是在虚构的1920年代东欧大陆展开一场耕战并重的对抗。游戏支持1-5人，大部分情况下为2-4人。&lt;/p>
+&lt;p>作为一款2016年出版的非对称游戏，《镰刀战争》的美术设计以及经典的引擎构筑玩法收获了一批玩家的青睐。而它的缺点也较为明显：游戏结束触发条件不够合理、阵营之间强度差距较大、没有提供足够的平衡拓展空间等等。而这些缺点的存在值得我们进行分析与思考，并吸收这些错误经验。&lt;/p>
+&lt;p>在阅读本文之前，读者应该对游戏的规则有基础的认识。在本文写作中，为了方便，一部分用于可能与官方汉化版不同，以下为与官方汉化不同用词的对照表。&lt;/p>
+&lt;h3 id="用词对照表">用词对照表&lt;/h3>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>文内用词&lt;/th>
+&lt;th>官方汉化&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>招募&lt;/td>
+&lt;td>新兵&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>战力&lt;/td>
+&lt;td>战力值&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>领地、土地&lt;/td>
+&lt;td>领土&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>基础行动&lt;/td>
+&lt;td>上层行动&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>高级行动&lt;/td>
+&lt;td>下层行动&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>T&lt;/td>
+&lt;td>回合&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>阵营&lt;/td>
+&lt;td>势力&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;h3 id="我们试图解决的问题">我们试图解决的问题&lt;/h3>
+&lt;ul>
+&lt;li>针对《镰刀战争》中的资源运作系统进行建模。算出《镰刀战争》中资源的价值。&lt;/li>
+&lt;li>在《镰刀战争》这个非对称游戏中，是否依然有称得上“过强”的阵营？&lt;/li>
+&lt;li>在《镰刀战争》中是否有不平衡的玩家板块？&lt;/li>
+&lt;/ul>
+&lt;h2 id="二资源的价值">二、资源的价值&lt;/h2>
+&lt;p>首先我们从分析每一种资源的价值开始。我们需要一个标准单位来衡量一名玩家在做各种行动时得到的价值。在《镰刀战争》中，这个单位显然可以是金币。原因是在结算时，所有金币以外的资源要么废弃，要么就有一个途径来转换为金币。有这样一个标准单位之后，我们便可以分析各个阵营的初始价值、各个板块的初始价值、行动的收益等。有的时候，我们也将用“G”来表示金币以获得更好的可读性。&lt;/p>
+&lt;p>但需要注意的是，一个行动的实际价值取决于该场游戏的其他玩家、版图上的兵力分布等等条件。以下分析不基于任何具体的对局，仅供参考。&lt;/p>
+&lt;p>接下来的分析基于的前提是：设计时，工厂卡的基础行动是相对平衡的，具有稳定的收益，从而使得玩家更有动力去争夺地图中心。&lt;/p>
+&lt;p>我们可以列出所有的工厂卡，并排序：&lt;/p>
+&lt;pre>&lt;code>1. 1金币 + 1战斗卡 -&amp;gt; 2生产 （生产只在该工厂卡中出现，所以暂时忽略）
+2. 1声望 -&amp;gt; 1招募 / 1升级
+3. 1声望 -&amp;gt; 1机甲 / 1建筑
+4. 2不同资源 -&amp;gt; 1机甲 / 1建筑
+5. 2不同资源 -&amp;gt; 1招募 / 1升级
+6. 1战斗卡 -&amp;gt; 2声望
+7. 1战斗卡 -&amp;gt; 3金币
+8. 1战斗卡 -&amp;gt; 3任意资源
+9. 1战斗卡 -&amp;gt; 1农民 + 2金币
+10. 1战斗卡 -&amp;gt; 1升级 + 1战力
+11. 1战力 -&amp;gt; 2声望
+12. 1战力 -&amp;gt; 3金币
+13. 2金币 -&amp;gt; 1升级 + 1声望
+14. 2金币 -&amp;gt; 1机甲 + 1战力
+15. 2金币 -&amp;gt; 1建筑 + 1声望
+16. 2金币 -&amp;gt; 1招募 + 1战力
+17. 1资源 -&amp;gt; 2战力 + 1战斗卡
+18. 1资源 -&amp;gt; 1战力 + 1战斗卡 + 1声望
+&lt;/code>&lt;/pre>
+&lt;p>我们直接可以得到作为行动收益时，资源之间的关系：&lt;/p></description></item><item><title>Initial_post</title><link>https://mikezom.github.io/posts/initial_post/</link><pubDate>Wed, 18 Jun 2025 09:52:33 +0800</pubDate><guid>https://mikezom.github.io/posts/initial_post/</guid><description>&lt;p>Finally get things working!&lt;/p>
+&lt;p>[x] test image uploading before writing more.&lt;/p>
+&lt;h3 id="github-actions">Github Actions&lt;/h3>
+&lt;p>Remember to checkout using private token&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-yaml" data-lang="yaml">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">name&lt;/span>: &lt;span style="color:#ae81ff">Release&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># Triggered by pushing on main branch&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">on&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">push&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">branches&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> - &lt;span style="color:#ae81ff">main&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">jobs&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">deploy&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">runs-on&lt;/span>: &lt;span style="color:#ae81ff">ubuntu-latest&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">steps&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> - &lt;span style="color:#f92672">name&lt;/span>: &lt;span style="color:#ae81ff">Checkout source&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">uses&lt;/span>: &lt;span style="color:#ae81ff">actions/checkout@v4&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">with&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">submodules&lt;/span>: &lt;span style="color:#66d9ef">true&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">fetch-depth&lt;/span>: &lt;span style="color:#ae81ff">0&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">token&lt;/span>: &lt;span style="color:#ae81ff">${{ secrets.PRIVATE_TOKEN }}&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> - &lt;span style="color:#f92672">name&lt;/span>: &lt;span style="color:#ae81ff">Setup Hugo&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">uses&lt;/span>: &lt;span style="color:#ae81ff">peaceiris/actions-hugo@v2&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">with&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">hugo-version&lt;/span>: &lt;span style="color:#ae81ff">latest&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> - &lt;span style="color:#f92672">name&lt;/span>: &lt;span style="color:#ae81ff">Build&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">run&lt;/span>: &lt;span style="color:#ae81ff">hugo --minify&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> - &lt;span style="color:#f92672">name&lt;/span>: &lt;span style="color:#ae81ff">Deploy&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">if&lt;/span>: &lt;span style="color:#ae81ff">github.ref == &amp;#39;refs/heads/main&amp;#39;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">run&lt;/span>: |&lt;span style="color:#e6db74">
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#e6db74"> cd public
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#e6db74"> git config user.email &amp;#39;&amp;lt;your.email&amp;gt;&amp;#39;
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#e6db74"> git config user.name &amp;#39;&amp;lt;your.name&amp;gt;&amp;#39;
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#e6db74"> git add .
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#e6db74"> git commit -m &amp;#39;&amp;lt;your.upload.commit&amp;gt;&amp;#39;
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#e6db74"> git push --force origin HEAD:main&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div></description></item></channel></rss>
